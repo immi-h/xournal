@@ -74,6 +74,7 @@ void init_stuff (int argc, char *argv[])
 
   // initialize data
   ui.default_page.bg->canvas_item = NULL;
+  ui.default_page.bg->canvas_item_view = NULL;
   ui.layerbox_length = 0;
 
   if (argc > 2 || (argc == 2 && argv[1][0] == '-')) {
@@ -155,7 +156,7 @@ void init_stuff (int argc, char *argv[])
   GTK_WIDGET_SET_FLAGS(GTK_WIDGET(canvas), GTK_CAN_FOCUS);
   GTK_WIDGET_SET_FLAGS(GTK_WIDGET(GET_COMPONENT("spinPageNo")), GTK_CAN_FOCUS);
   
-  // install hooks on button/key/activation events to make the spinPageNo lose focus
+  // install hooks 	on button/key/activation events to make the spinPageNo lose focus
   gtk_container_forall(GTK_CONTAINER(winMain), install_focus_hooks, NULL);
 
   // set up and initialize the canvas

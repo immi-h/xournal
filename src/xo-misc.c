@@ -106,10 +106,16 @@ struct Page *new_page(struct Page *template)
     g_object_ref(pg->bg->pixbuf);
     refstring_ref(pg->bg->filename);
   }
+  pg->viewingGroup = (GnomeCanvasGroup *) gnome_canvas_item_new(
+      gnome_canvas_root(viewCanvas), gnome_canvas_clipgroup_get_type(), NULL);
+
   pg->group = (GnomeCanvasGroup *) gnome_canvas_item_new(
       gnome_canvas_root(canvas), gnome_canvas_clipgroup_get_type(), NULL);
   make_page_clipbox(pg);
   update_canvas_bg(pg);
+  l->viewGroup = (GnomeCanvasGroup *) gnome_canvas_item_new(
+      pg->viewingGroup, gnome_canvas_group_get_type(), NULL);
+
   l->group = (GnomeCanvasGroup *) gnome_canvas_item_new(
       pg->group, gnome_canvas_group_get_type(), NULL);
   
@@ -133,10 +139,16 @@ struct Page *new_page_with_bg(struct Background *bg, double width, double height
   pg->bg->canvas_item = NULL;
   pg->height = height;
   pg->width = width;
+  pg->viewingGroup = (GnomeCanvasGroup *) gnome_canvas_item_new(
+      gnome_canvas_root(viewCanvas), gnome_canvas_clipgroup_get_type(), NULL);
+
   pg->group = (GnomeCanvasGroup *) gnome_canvas_item_new(
       gnome_canvas_root(canvas), gnome_canvas_clipgroup_get_type(), NULL);
   make_page_clipbox(pg);
   update_canvas_bg(pg);
+  l->viewGroup = (GnomeCanvasGroup *) gnome_canvas_item_new(
+      pg->viewingGroup, gnome_canvas_group_get_type(), NULL);
+
   l->group = (GnomeCanvasGroup *) gnome_canvas_item_new(
       pg->group, gnome_canvas_group_get_type(), NULL);
   
@@ -349,6 +361,7 @@ void clear_undo_stack(void)
     }
     else if (undo->type == ITEM_DELETE_LAYER) {
       undo->layer->group = NULL;
+      undo->layer->viewGroup = NULL;
       delete_layer(undo->layer);
     }
     else if (undo->type == ITEM_DELETE_PAGE) {
@@ -618,6 +631,7 @@ void make_page_clipbox(struct Page *pg)
   gnome_canvas_path_def_lineto(pg_clip, pg->width, 0.);
   gnome_canvas_path_def_closepath(pg_clip);
   gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->group), "path", pg_clip, NULL);
+  gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->viewingGroup), "path", pg_clip, NULL);
   gnome_canvas_path_def_unref(pg_clip);
 }
 
@@ -721,6 +735,7 @@ void make_canvas_items(void)
 void update_canvas_bg(struct Page *pg)
 {
   GnomeCanvasGroup *group;
+  GnomeCanvasGroup *groupView;
   GnomeCanvasPoints *seg;
   GdkPixbuf *scaled_pix;
   double *pt;
@@ -734,13 +749,25 @@ void update_canvas_bg(struct Page *pg)
   
   if (pg->bg->type == BG_SOLID)
   {
+    pg->bg->canvas_item_view = gnome_canvas_item_new(pg->viewingGroup,
+                               gnome_canvas_group_get_type(), NULL);
+
     pg->bg->canvas_item = gnome_canvas_item_new(pg->group,
                                gnome_canvas_group_get_type(), NULL);
+
     group = GNOME_CANVAS_GROUP(pg->bg->canvas_item);
+    groupView = GNOME_CANVAS_GROUP(pg->bg->canvas_item_view);
+
+    lower_canvas_item_to(pg->viewingGroup, pg->bg->canvas_item, NULL);
     lower_canvas_item_to(pg->group, pg->bg->canvas_item, NULL);
+    gnome_canvas_item_new(groupView, gnome_canvas_rect_get_type(),
+      "x1", 0., "x2", pg->width, "y1", 0., "y2", pg->height,
+      "fill-color-rgba", pg->bg->color_rgba, NULL);
+	  
     gnome_canvas_item_new(group, gnome_canvas_rect_get_type(),
       "x1", 0., "x2", pg->width, "y1", 0., "y2", pg->height,
       "fill-color-rgba", pg->bg->color_rgba, NULL);
+
     if (pg->bg->ruling == RULING_NONE) return;
     seg = gnome_canvas_points_new(2);
     pt = seg->coords;
@@ -748,6 +775,17 @@ void update_canvas_bg(struct Page *pg)
       pt[1] = 0; pt[3] = pg->height;
       for (x=RULING_GRAPHSPACING; x<pg->width-1; x+=RULING_GRAPHSPACING) {
         pt[0] = pt[2] = x;
+
+        gnome_canvas_item_new(groupView, gnome_canvas_line_get_type(),
+           "points", seg, "fill-color-rgba", RULING_COLOR,
+           "width-units", RULING_THICKNESS, NULL);
+        gnome_canvas_item_new(group, gnome_canvas_line_get_type(),
+           "points", seg, "fill-color-rgba", RULING_COLOR,
+           "width-units", RULING_THICKNESS, NULL);
+
+        gnome_canvas_item_new(groupView, gnome_canvas_line_get_type(),
+           "points", seg, "fill-color-rgba", RULING_COLOR,
+           "width-units", RULING_THICKNESS, NULL);
         gnome_canvas_item_new(group, gnome_canvas_line_get_type(),
            "points", seg, "fill-color-rgba", RULING_COLOR,
            "width-units", RULING_THICKNESS, NULL);
@@ -755,6 +793,9 @@ void update_canvas_bg(struct Page *pg)
       pt[0] = 0; pt[2] = pg->width;
       for (y=RULING_GRAPHSPACING; y<pg->height-1; y+=RULING_GRAPHSPACING) {
         pt[1] = pt[3] = y;
+        gnome_canvas_item_new(groupView, gnome_canvas_line_get_type(),
+           "points", seg, "fill-color-rgba", RULING_COLOR,
+           "width-units", RULING_THICKNESS, NULL);
         gnome_canvas_item_new(group, gnome_canvas_line_get_type(),
            "points", seg, "fill-color-rgba", RULING_COLOR,
            "width-units", RULING_THICKNESS, NULL);
@@ -765,6 +806,9 @@ void update_canvas_bg(struct Page *pg)
     pt[0] = 0; pt[2] = pg->width;
     for (y=RULING_TOPMARGIN; y<pg->height-1; y+=RULING_SPACING) {
       pt[1] = pt[3] = y;
+      gnome_canvas_item_new(groupView, gnome_canvas_line_get_type(),
+         "points", seg, "fill-color-rgba", RULING_COLOR,
+         "width-units", RULING_THICKNESS, NULL);
       gnome_canvas_item_new(group, gnome_canvas_line_get_type(),
          "points", seg, "fill-color-rgba", RULING_COLOR,
          "width-units", RULING_THICKNESS, NULL);
@@ -772,6 +816,9 @@ void update_canvas_bg(struct Page *pg)
     if (pg->bg->ruling == RULING_LINED) {
       pt[0] = pt[2] = RULING_LEFTMARGIN;
       pt[1] = 0; pt[3] = pg->height;
+      gnome_canvas_item_new(groupView, gnome_canvas_line_get_type(),
+         "points", seg, "fill-color-rgba", RULING_MARGIN_COLOR,
+         "width-units", RULING_THICKNESS, NULL);
       gnome_canvas_item_new(group, gnome_canvas_line_get_type(),
          "points", seg, "fill-color-rgba", RULING_MARGIN_COLOR,
          "width-units", RULING_THICKNESS, NULL);
@@ -1407,6 +1454,7 @@ void do_switch_page(int pg, gboolean rescroll, gboolean refresh_all)
       layer = (struct Layer *)list->data;
       if (layer->group!=NULL)
         gnome_canvas_item_show(GNOME_CANVAS_ITEM(layer->group));
+        gnome_canvas_item_show(GNOME_CANVAS_ITEM(layer->viewGroup));
     }
   
   ui.cur_page = g_list_nth_data(journal.pages, ui.pageno);
@@ -1448,7 +1496,10 @@ void update_page_stuff(void)
       pg = (struct Page *)pglist->data;
       if (pg->group!=NULL) {
         pg->hoffset = 0.; pg->voffset = vertpos;
-        gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->group), 
+        gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->group),
+            "x", pg->hoffset, "y", pg->voffset, NULL);
+
+        gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->group),
             "x", pg->hoffset, "y", pg->voffset, NULL);
         gnome_canvas_item_show(GNOME_CANVAS_ITEM(pg->group));
       }

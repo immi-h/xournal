@@ -79,6 +79,7 @@ typedef struct Refstring {
 typedef struct Background {
   int type;
   GnomeCanvasItem *canvas_item;
+  GnomeCanvasItem *canvas_item_view;
   int color_no;
   guint color_rgba;
   int ruling;
@@ -170,6 +171,7 @@ typedef struct Item {
   GnomeCanvasPoints *path;
   gdouble *widths;
   GnomeCanvasItem *canvas_item; // the corresponding canvas item, or NULL
+  GnomeCanvasItem *canvas_item_view; // the corresponding canvas item, or NULL
   struct BBox bbox;
   struct UndoErasureData *erasure; // for temporary use during erasures
   // the following fields for ITEM_TEXT:
@@ -214,8 +216,10 @@ typedef struct Item {
 
 typedef struct Layer {
   GList *items; // the items on the layer, from bottom to top
+  GList *viewItems;
   int nitems;
   GnomeCanvasGroup *group;
+  GnomeCanvasGroup *viewGroup;
 } Layer;
 
 typedef struct Page {
@@ -225,6 +229,7 @@ typedef struct Page {
   double hoffset, voffset; // offsets of canvas group rel. to canvas root
   struct Background *bg;
   GnomeCanvasGroup *group;
+  GnomeCanvasGroup *viewingGroup;
 } Page;
 
 typedef struct Journal {
@@ -422,6 +427,8 @@ typedef struct BgPdf {
 
 extern GtkWidget *winMain;
 extern GnomeCanvas *canvas;
+extern GnomeCanvas *viewCanvas;
+
 
 // the data
 

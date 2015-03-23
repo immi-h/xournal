@@ -263,6 +263,7 @@ void clipboard_paste_from_xournal(GtkSelectionData *sel_data)
       else item->widths = NULL;
       update_item_bbox(item);
       make_canvas_item_one(ui.cur_layer->group, item);
+      make_canvas_item_one(ui.cur_layer->viewItems, item);
     }
     if (item->type == ITEM_TEXT) {
       g_memmove(&item->brush, p, sizeof(struct Brush)); p+= sizeof(struct Brush);

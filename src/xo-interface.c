@@ -14,10 +14,14 @@
 
 #include <gdk/gdkkeysyms.h>
 #include <gtk/gtk.h>
+#include <libgnomecanvas/libgnomecanvas.h>
 
+#include "xournal.h"
 #include "xo-callbacks.h"
 #include "xo-interface.h"
 #include "xo-support.h"
+
+extern struct UIData ui;
 
 #define GLADE_HOOKUP_OBJECT(component,widget,name) \
   g_object_set_data_full (G_OBJECT (component), name, \
@@ -26,10 +30,48 @@
 #define GLADE_HOOKUP_OBJECT_NO_REF(component,widget,name) \
   g_object_set_data (G_OBJECT (component), name, widget)
 
+GnomeCanvas* viewCanvas;
+/**
+ * @brief create_winView
+ * creates the viewer window
+ */
+GtkWidget* create_winView(){
+    GtkWidget* winView = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_icon(GTK_WINDOW(winMain), create_pixbuf("xournal.png"));
+    GtkWidget* vbox =gtk_vbox_new(FALSE, 0);
+
+
+    GtkWidget* scrolledWindow=gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (scrolledWindow), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+
+    viewCanvas = gnome_canvas_new_aa();
+
+    gtk_window_set_default_size(GTK_WINDOW (winMain), ui.window_default_width, ui.window_default_height);
+
+    gtk_container_add(GTK_CONTAINER(winView), vbox);
+    gtk_box_pack_start(GTK_BOX(vbox), scrolledWindow, TRUE, TRUE, 5);
+    gtk_container_add(GTK_CONTAINER(scrolledWindow), viewCanvas);
+
+    gnome_canvas_set_pixels_per_unit (viewCanvas, ui.zoom);
+
+    gnome_canvas_set_center_scroll_region (viewCanvas, TRUE);
+    gtk_layout_get_hadjustment(GTK_LAYOUT (viewCanvas))->step_increment = ui.scrollbar_step_increment;
+    gtk_layout_get_vadjustment(GTK_LAYOUT (viewCanvas))->step_increment = ui.scrollbar_step_increment;
+
+	gtk_widget_show(viewCanvas);
+
+    gtk_widget_show_all(winView);
+
+
+    return winView;
+
+}
+
 GtkWidget*
 create_winMain (void)
 {
   GtkWidget *winMain;
+  GtkWidget *winView;
   GtkWidget *vboxMain;
   GtkWidget *menubar;
   GtkWidget *menuFile;
@@ -362,6 +404,9 @@ create_winMain (void)
 
   winMain = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title (GTK_WINDOW (winMain), _("Xournal"));
+
+  winView = create_winView();
+  gtk_window_set_title (GTK_WINDOW (winView), _("Xournal viewing window"));
 
   vboxMain = gtk_vbox_new (FALSE, 0);
   gtk_widget_show (vboxMain);
@@ -2941,6 +2986,7 @@ create_winMain (void)
   return winMain;
 }
 
+
 GtkWidget*
 create_papersizeDialog (void)
 {
@@ -3061,6 +3107,7 @@ create_papersizeDialog (void)
 
   return papersizeDialog;
 }
+
 
 GtkWidget*
 create_aboutDialog (void)

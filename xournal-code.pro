@@ -2,7 +2,7 @@ TEMPLATE = app
 CONFIG -= app_bundle
 CONFIG -= qt
 
-PKGCONFIG += gtk-2.0
+PKGCONFIG += gtk-2.0 libgnomecanvas-2.0
 
 SOURCES += \
     src/xo-clipboard.c \
@@ -18,8 +18,6 @@ SOURCES += \
     src/main.c \
     src/xo-callbacks.c
 
-include(deployment.pri)
-qtcAddDeployment()
 
 HEADERS += \
     src/xo-callbacks.h \
@@ -36,5 +34,6 @@ HEADERS += \
     src/xournal.h
 
 DISTFILES += \
-    xournal.glade
+    xournal.glade \
+    uren.txt
 

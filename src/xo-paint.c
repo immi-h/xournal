@@ -234,6 +234,12 @@ void create_new_stroke(GdkEvent *event)
   get_pointer_coords(event, ui.cur_path.coords);
   
   if (ui.cur_brush->ruler) {
+    ui.cur_item->canvas_item = gnome_canvas_item_new(ui.cur_layer->viewGroup,
+      gnome_canvas_line_get_type(),
+      "cap-style", GDK_CAP_ROUND, "join-style", GDK_JOIN_ROUND,
+      "fill-color-rgba", ui.cur_item->brush.color_rgba,
+      "width-units", ui.cur_item->brush.thickness, NULL);
+
     ui.cur_item->canvas_item = gnome_canvas_item_new(ui.cur_layer->group,
       gnome_canvas_line_get_type(),
       "cap-style", GDK_CAP_ROUND, "join-style", GDK_JOIN_ROUND,
@@ -335,6 +341,7 @@ void finalize_stroke(void)
     gtk_object_destroy(GTK_OBJECT(ui.cur_item->canvas_item));
     // make a new line item to replace it
     make_canvas_item_one(ui.cur_layer->group, ui.cur_item);
+    make_canvas_item_one(ui.cur_layer->viewGroup, ui.cur_item);
   }
 
   // add undo information
@@ -345,6 +352,11 @@ void finalize_stroke(void)
 
   // store the item on top of the layer stack
   ui.cur_layer->items = g_list_append(ui.cur_layer->items, ui.cur_item);
+
+  Item* viewingItem = malloc(sizeof(Item));
+  memcpy(viewingItem, ui.cur_item, sizeof(Item));
+
+  ui.cur_layer->viewItems = g_list_append(ui.cur_layer->items, ui.cur_item);
   ui.cur_layer->nitems++;
   ui.cur_item = NULL;
   ui.cur_item_type = ITEM_NONE;
@@ -420,6 +432,7 @@ void erase_stroke_portions(struct Item *item, double x, double y, double radius,
       if (newhead != NULL) {
         update_item_bbox(newhead);
         make_canvas_item_one(ui.cur_layer->group, newhead);
+        make_canvas_item_one(ui.cur_layer->viewGroup, newhead);
         lower_canvas_item_to(ui.cur_layer->group,
                   newhead->canvas_item, erasure->item->canvas_item);
         erasure->replacement_items = g_list_prepend(erasure->replacement_items, newhead);
@@ -439,7 +452,10 @@ void erase_stroke_portions(struct Item *item, double x, double y, double radius,
   if (!need_recalc) return;
   update_item_bbox(item);
   make_canvas_item_one(ui.cur_layer->group, item);
-  lower_canvas_item_to(ui.cur_layer->group, item->canvas_item, 
+  make_canvas_item_one(ui.cur_layer->viewGroup, item);
+  lower_canvas_item_to(ui.cur_layer->viewGroup, item->canvas_item,
+                                      erasure->item->canvas_item);
+  lower_canvas_item_to(ui.cur_layer->group, item->canvas_item,
                                       erasure->item->canvas_item);
 }
 

@@ -1247,7 +1247,6 @@ on_journalFlatten_activate             (GtkMenuItem     *menuitem,
 
 }
 
-
 // the paper sizes dialog
 
 GtkWidget *papersize_dialog;
