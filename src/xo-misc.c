@@ -712,6 +712,11 @@ void make_canvas_items(void)
   
   for (pagelist = journal.pages; pagelist!=NULL; pagelist = pagelist->next) {
     pg = (struct Page *)pagelist->data;
+    if (pg->viewingGroup == NULL) {
+      pg->viewingGroup = (GnomeCanvasGroup *) gnome_canvas_item_new(
+         gnome_canvas_root(canvas), gnome_canvas_clipgroup_get_type(), NULL);
+      make_page_clipbox(pg);
+    }
     if (pg->group == NULL) {
       pg->group = (GnomeCanvasGroup *) gnome_canvas_item_new(
          gnome_canvas_root(canvas), gnome_canvas_clipgroup_get_type(), NULL);
@@ -723,10 +728,17 @@ void make_canvas_items(void)
       if (l->group == NULL)
         l->group = (GnomeCanvasGroup *) gnome_canvas_item_new(
            pg->group, gnome_canvas_group_get_type(), NULL);
+
+      if(l->viewGroup == NULL)
+        l->viewGroup = (GnomeCanvasGroup *) gnome_canvas_item_new(
+           pg->viewingGroup, gnome_canvas_group_get_type(), NULL);
+
       for (itemlist = l->items; itemlist!=NULL; itemlist = itemlist->next) {
-        item = (struct Item *)itemlist->data;
+        item = (struct Item *) itemlist->data;
         if (item->canvas_item == NULL)
           make_canvas_item_one(l->group, item);
+        if (item->canvas_item_view == NULL)
+          make_canvas_item_one(l->viewGroup, item);
       }
     }
   }
@@ -1473,8 +1485,10 @@ void do_switch_page(int pg, gboolean rescroll, gboolean refresh_all)
     
     if (refresh_all) 
       gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-    else if (!ui.view_continuous)
+    else if (!ui.view_continuous){
+      gnome_canvas_item_move(GNOME_CANVAS_ITEM(ui.cur_page->viewingGroup), 0., 0.);
       gnome_canvas_item_move(GNOME_CANVAS_ITEM(ui.cur_page->group), 0., 0.);
+    }
   }
 }
 
@@ -1496,19 +1510,26 @@ void update_page_stuff(void)
       pg = (struct Page *)pglist->data;
       if (pg->group!=NULL) {
         pg->hoffset = 0.; pg->voffset = vertpos;
+        gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->viewingGroup),
+            "x", pg->hoffset, "y", pg->voffset, NULL);
         gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->group),
             "x", pg->hoffset, "y", pg->voffset, NULL);
 
+        gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->viewingGroup),
+            "x", pg->hoffset, "y", pg->voffset, NULL);
         gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->group),
             "x", pg->hoffset, "y", pg->voffset, NULL);
+
         gnome_canvas_item_show(GNOME_CANVAS_ITEM(pg->group));
+        gnome_canvas_item_show(GNOME_CANVAS_ITEM(pg->viewingGroup));
       }
       vertpos += pg->height + VIEW_CONTINUOUS_SKIP;
       if (pg->width > maxwidth) maxwidth = pg->width;
     }
     vertpos -= VIEW_CONTINUOUS_SKIP;
     gnome_canvas_set_scroll_region(canvas, 0, 0, maxwidth, vertpos);
-  } 
+    gnome_canvas_set_scroll_region(viewCanvas, 0, 0, maxwidth, vertpos);
+  }
   else if (ui.view_continuous == VIEW_MODE_HORIZONTAL) {
     horizpos = 0.; 
     maxheight = 0.;
@@ -1516,29 +1537,41 @@ void update_page_stuff(void)
       pg = (struct Page *)pglist->data;
       if (pg->group!=NULL) {
         pg->hoffset = horizpos; pg->voffset = 0.;
-        gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->group), 
+        gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->viewingGroup),
             "x", pg->hoffset, "y", pg->voffset, NULL);
+        gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->group),
+            "x", pg->hoffset, "y", pg->voffset, NULL);
+
         gnome_canvas_item_show(GNOME_CANVAS_ITEM(pg->group));
+        gnome_canvas_item_show(GNOME_CANVAS_ITEM(pg->viewingGroup));
       }
       horizpos += pg->width + VIEW_CONTINUOUS_SKIP;
       if (pg->height > maxheight) maxheight = pg->height;
     }
     horizpos -= VIEW_CONTINUOUS_SKIP;
     gnome_canvas_set_scroll_region(canvas, 0, 0, horizpos, maxheight);
-  } 
+    gnome_canvas_set_scroll_region(viewCanvas, 0, 0, horizpos, maxheight);
+  }
   else { // VIEW_MODE_ONE_PAGE
     for (pglist = journal.pages; pglist!=NULL; pglist = pglist->next) {
       pg = (struct Page *)pglist->data;
       if (pg == ui.cur_page && pg->group!=NULL) {
         pg->hoffset = 0.; pg->voffset = 0.;
-        gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->group), 
+        gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->viewingGroup),
             "x", pg->hoffset, "y", pg->voffset, NULL);
+        gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->group),
+            "x", pg->hoffset, "y", pg->voffset, NULL);
+
         gnome_canvas_item_show(GNOME_CANVAS_ITEM(pg->group));
+        gnome_canvas_item_show(GNOME_CANVAS_ITEM(pg->viewingGroup));
       } else {
         if (pg->group!=NULL) gnome_canvas_item_hide(GNOME_CANVAS_ITEM(pg->group));
+        if (pg->viewingGroup!=NULL) gnome_canvas_item_hide(GNOME_CANVAS_ITEM(pg->viewingGroup));
       }
     }
     gnome_canvas_set_scroll_region(canvas, 0, 0, ui.cur_page->width, ui.cur_page->height);
+    gnome_canvas_set_scroll_region(viewCanvas, 0, 0, ui.cur_page->width, ui.cur_page->height);
+
   }
 
   // update the page / layer info at bottom of screen
