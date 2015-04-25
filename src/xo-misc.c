@@ -635,7 +635,7 @@ void make_page_clipbox(struct Page *pg)
   gnome_canvas_path_def_unref(pg_clip);
 }
 
-void make_canvas_item_one(GnomeCanvasGroup *group, struct Item *item)
+void make_canvas_item_one(GnomeCanvasGroup *group, GnomeCanvasGroup* viewGroup, struct Item *item)
 {
   PangoFontDescription *font_desc;
   GnomeCanvasPoints points;
@@ -644,18 +644,35 @@ void make_canvas_item_one(GnomeCanvasGroup *group, struct Item *item)
 
   if (item->type == ITEM_STROKE) {
     if (!item->brush.variable_width)
+    {
+      item->canvas_item_view = gnome_canvas_item_new(viewGroup,
+            gnome_canvas_line_get_type(), "points", item->path,
+            "cap-style", GDK_CAP_ROUND, "join-style", GDK_JOIN_ROUND,
+            "fill-color-rgba", item->brush.color_rgba,
+            "width-units", item->brush.thickness, NULL);
+
       item->canvas_item = gnome_canvas_item_new(group,
             gnome_canvas_line_get_type(), "points", item->path,   
             "cap-style", GDK_CAP_ROUND, "join-style", GDK_JOIN_ROUND,
             "fill-color-rgba", item->brush.color_rgba,  
             "width-units", item->brush.thickness, NULL);
+    }
     else {
+      item->canvas_item_view = gnome_canvas_item_new(viewGroup,
+            gnome_canvas_group_get_type(), NULL);
       item->canvas_item = gnome_canvas_item_new(group,
             gnome_canvas_group_get_type(), NULL);
       points.num_points = 2;
       points.ref_count = 1;
       for (j = 0; j < item->path->num_points-1; j++) {
         points.coords = item->path->coords+2*j;
+
+        gnome_canvas_item_new((GnomeCanvasGroup *) item->canvas_item_view,
+              gnome_canvas_line_get_type(), "points", &points,
+              "cap-style", GDK_CAP_ROUND, "join-style", GDK_JOIN_ROUND,
+              "fill-color-rgba", item->brush.color_rgba,
+              "width-units", item->widths[j], NULL);
+
         gnome_canvas_item_new((GnomeCanvasGroup *) item->canvas_item,
               gnome_canvas_line_get_type(), "points", &points, 
               "cap-style", GDK_CAP_ROUND, "join-style", GDK_JOIN_ROUND, 
@@ -675,8 +692,16 @@ void make_canvas_item_one(GnomeCanvasGroup *group, struct Item *item)
     }
 #endif
     font_desc = pango_font_description_from_string(item->font_name);
+
     pango_font_description_set_absolute_size(font_desc, 
             item->font_size*ui.zoom*PANGO_SCALE);
+
+    item->canvas_item_view = gnome_canvas_item_new(viewGroup,
+          gnome_canvas_text_get_type(),
+          "x", item->bbox.left, "y", item->bbox.top, "anchor", GTK_ANCHOR_NW,
+          "font-desc", font_desc, "fill-color-rgba", item->brush.color_rgba,
+          "text", item->text, NULL);
+
     item->canvas_item = gnome_canvas_item_new(group,
           gnome_canvas_text_get_type(),
           "x", item->bbox.left, "y", item->bbox.top, "anchor", GTK_ANCHOR_NW,
@@ -692,6 +717,14 @@ void make_canvas_item_one(GnomeCanvasGroup *group, struct Item *item)
 #endif
   }
   if (item->type == ITEM_IMAGE) {
+    item->canvas_item_view = gnome_canvas_item_new(viewGroup,
+          gnome_canvas_pixbuf_get_type(),
+          "pixbuf", item->image,
+          "x", item->bbox.left, "y", item->bbox.top,
+          "width", item->bbox.right - item->bbox.left,
+          "height", item->bbox.bottom - item->bbox.top,
+          "width-set", TRUE, "height-set", TRUE,
+          NULL);
     item->canvas_item = gnome_canvas_item_new(group,
           gnome_canvas_pixbuf_get_type(),
           "pixbuf", item->image,
@@ -736,9 +769,7 @@ void make_canvas_items(void)
       for (itemlist = l->items; itemlist!=NULL; itemlist = itemlist->next) {
         item = (struct Item *) itemlist->data;
         if (item->canvas_item == NULL)
-          make_canvas_item_one(l->group, item);
-        if (item->canvas_item_view == NULL)
-          make_canvas_item_one(l->viewGroup, item);
+          make_canvas_item_one(l->group, l->viewGroup, item);
       }
     }
   }
@@ -1483,8 +1514,10 @@ void do_switch_page(int pg, gboolean rescroll, gboolean refresh_all)
       cy = ui.cur_page->voffset*ui.zoom;
     gnome_canvas_scroll_to(canvas, cx, cy);
     
-    if (refresh_all) 
+    if (refresh_all) {
       gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
+      gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
+    }
     else if (!ui.view_continuous){
       gnome_canvas_item_move(GNOME_CANVAS_ITEM(ui.cur_page->viewingGroup), 0., 0.);
       gnome_canvas_item_move(GNOME_CANVAS_ITEM(ui.cur_page->group), 0., 0.);
@@ -2076,7 +2109,7 @@ void resize_journal_items_by(GList *itemlist, double scaling_x, double scaling_y
   GList *list;
   double mean_scaling, temp;
   double *pt, *wid;
-  GnomeCanvasGroup *group;
+  GnomeCanvasGroup *group, *viewGroup;
   int i; 
   
   /* geometric mean of x and y scalings = rescaling for stroke widths
@@ -2137,8 +2170,9 @@ void resize_journal_items_by(GList *itemlist, double scaling_x, double scaling_y
     // redraw the item
     if (item->canvas_item!=NULL) {
       group = (GnomeCanvasGroup *) item->canvas_item->parent;
+      viewGroup = (GnomeCanvasGroup *) item->canvas_item->parent;
       gtk_object_destroy(GTK_OBJECT(item->canvas_item));
-      make_canvas_item_one(group, item);
+      make_canvas_item_one(group, viewGroup, item);
     }
   }
 }

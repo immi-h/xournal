@@ -171,7 +171,7 @@ typedef struct Item {
   GnomeCanvasPoints *path;
   gdouble *widths;
   GnomeCanvasItem *canvas_item; // the corresponding canvas item, or NULL
-  GnomeCanvasItem *canvas_item_view; // the corresponding canvas item, or NULL
+  GnomeCanvasItem *canvas_item_view; // the corresponding canvas item on the viewing window, or NULL
   struct BBox bbox;
   struct UndoErasureData *erasure; // for temporary use during erasures
   // the following fields for ITEM_TEXT:
@@ -216,7 +216,6 @@ typedef struct Item {
 
 typedef struct Layer {
   GList *items; // the items on the layer, from bottom to top
-  GList *viewItems;
   int nitems;
   GnomeCanvasGroup *group;
   GnomeCanvasGroup *viewGroup;
@@ -428,6 +427,7 @@ typedef struct BgPdf {
 extern GtkWidget *winMain;
 extern GnomeCanvas *canvas;
 extern GnomeCanvas *viewCanvas;
+extern GtkWidget *scrolledWindowView;
 
 
 // the data

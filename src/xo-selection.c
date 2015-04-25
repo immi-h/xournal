@@ -645,7 +645,8 @@ void recolor_selection(int color_no, guint color_rgba)
   struct Item *item;
   struct Brush *brush;
   GnomeCanvasGroup *group;
-  
+  GnomeCanvasGroup *viewGroup;
+
   if (ui.selection == NULL) return;
   prepare_new_undo();
   undo->type = ITEM_REPAINTSEL;
@@ -669,8 +670,10 @@ void recolor_selection(int color_no, guint color_rgba)
            "fill-color-rgba", item->brush.color_rgba, NULL);
       else {
         group = (GnomeCanvasGroup *) item->canvas_item->parent;
+        viewGroup = (GnomeCanvasGroup *) item->canvas_item_view->parent;
+
         gtk_object_destroy(GTK_OBJECT(item->canvas_item));
-        make_canvas_item_one(group, item);
+        make_canvas_item_one(group, viewGroup, item);
       }
     }
   }
@@ -682,7 +685,8 @@ void rethicken_selection(int val)
   struct Item *item;
   struct Brush *brush;
   GnomeCanvasGroup *group;
-  
+  GnomeCanvasGroup *viewGroup;
+
   if (ui.selection == NULL) return;
   prepare_new_undo();
   undo->type = ITEM_REPAINTSEL;
@@ -705,9 +709,10 @@ void rethicken_selection(int val)
            "width-units", item->brush.thickness, NULL);
       else {
         group = (GnomeCanvasGroup *) item->canvas_item->parent;
+        viewGroup = (GnomeCanvasGroup *) item->canvas_item_view->parent;
         gtk_object_destroy(GTK_OBJECT(item->canvas_item));
         item->brush.variable_width = FALSE;
-        make_canvas_item_one(group, item);
+        make_canvas_item_one(group, viewGroup, item);
       }
     }
   }

@@ -339,7 +339,7 @@ struct Item *insert_recognized_curpath(void)
   erasure->replacement_items = g_list_append(erasure->replacement_items, item);
   ui.cur_layer->items = g_list_append(ui.cur_layer->items, item);
   ui.cur_layer->nitems++;
-  make_canvas_item_one(ui.cur_layer->group, item);
+  make_canvas_item_one(ui.cur_layer->group, ui.cur_layer->viewGroup, item);
   return item;
 }
 

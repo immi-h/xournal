@@ -66,7 +66,7 @@ void create_image_from_pixbuf(GdkPixbuf *pixbuf, double *pt)
   ui.cur_layer->items = g_list_append(ui.cur_layer->items, item);
   ui.cur_layer->nitems++;
   
-  make_canvas_item_one(ui.cur_layer->group, item);
+  make_canvas_item_one(ui.cur_layer->group, ui.cur_layer->viewGroup, item);
 
   // add undo information
   prepare_new_undo();

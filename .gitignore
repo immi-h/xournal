@@ -1,0 +1,13 @@
+uren.txt
+*.pro.user
+*.sw[n-p]
+src/ttsubset/*
+src/.debs/*
+*.po
+*.Po
+*.o
+autom4te.cache/*
+nohup.out
+*.autosave
+
+

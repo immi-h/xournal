@@ -31,6 +31,7 @@ extern struct UIData ui;
   g_object_set_data (G_OBJECT (component), name, widget)
 
 GnomeCanvas* viewCanvas;
+GtkWidget *scrolledWindowView;
 /**
  * @brief create_winView
  * creates the viewer window
@@ -41,16 +42,16 @@ GtkWidget* create_winView(){
     GtkWidget* vbox =gtk_vbox_new(FALSE, 0);
 
 
-    GtkWidget* scrolledWindow=gtk_scrolled_window_new(NULL, NULL);
-    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (scrolledWindow), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+    scrolledWindowView=gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (scrolledWindowView), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
     viewCanvas = gnome_canvas_new_aa();
 
     gtk_window_set_default_size(GTK_WINDOW (winMain), ui.window_default_width, ui.window_default_height);
 
     gtk_container_add(GTK_CONTAINER(winView), vbox);
-    gtk_box_pack_start(GTK_BOX(vbox), scrolledWindow, TRUE, TRUE, 5);
-    gtk_container_add(GTK_CONTAINER(scrolledWindow), viewCanvas);
+    gtk_box_pack_start(GTK_BOX(vbox), scrolledWindowView, TRUE, TRUE, 5);
+    gtk_container_add(GTK_CONTAINER(scrolledWindowView), viewCanvas);
 
     gnome_canvas_set_pixels_per_unit (viewCanvas, ui.zoom);
 

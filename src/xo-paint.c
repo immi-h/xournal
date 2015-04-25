@@ -21,6 +21,7 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #include <libgnomecanvas/libgnomecanvas.h>
+#include <stdio.h>
 
 #include "xournal.h"
 #include "xo-callbacks.h"
@@ -234,7 +235,7 @@ void create_new_stroke(GdkEvent *event)
   get_pointer_coords(event, ui.cur_path.coords);
   
   if (ui.cur_brush->ruler) {
-    ui.cur_item->canvas_item = gnome_canvas_item_new(ui.cur_layer->viewGroup,
+    ui.cur_item->canvas_item_view = gnome_canvas_item_new(ui.cur_layer->viewGroup,
       gnome_canvas_line_get_type(),
       "cap-style", GDK_CAP_ROUND, "join-style", GDK_JOIN_ROUND,
       "fill-color-rgba", ui.cur_item->brush.color_rgba,
@@ -247,8 +248,12 @@ void create_new_stroke(GdkEvent *event)
       "width-units", ui.cur_item->brush.thickness, NULL);
     ui.cur_item->brush.variable_width = FALSE;
   } else
+  {
+    ui.cur_item->canvas_item_view = gnome_canvas_item_new(
+      ui.cur_layer->viewGroup, gnome_canvas_group_get_type(), NULL);
     ui.cur_item->canvas_item = gnome_canvas_item_new(
       ui.cur_layer->group, gnome_canvas_group_get_type(), NULL);
+  }
 }
 
 void continue_stroke(GdkEvent *event)
@@ -329,6 +334,7 @@ void finalize_stroke(void)
   ui.cur_item->path = gnome_canvas_points_new(ui.cur_path.num_points);
   g_memmove(ui.cur_item->path->coords, ui.cur_path.coords, 
       2*ui.cur_path.num_points*sizeof(double));
+
   if (ui.cur_item->brush.variable_width)
     ui.cur_item->widths = (gdouble *)g_memdup(ui.cur_widths, 
                             (ui.cur_path.num_points-1)*sizeof(gdouble));
@@ -340,8 +346,7 @@ void finalize_stroke(void)
     // destroy the entire group of temporary line segments
     gtk_object_destroy(GTK_OBJECT(ui.cur_item->canvas_item));
     // make a new line item to replace it
-    make_canvas_item_one(ui.cur_layer->group, ui.cur_item);
-    make_canvas_item_one(ui.cur_layer->viewGroup, ui.cur_item);
+    make_canvas_item_one(ui.cur_layer->group, ui.cur_layer->viewGroup, ui.cur_item);
   }
 
   // add undo information
@@ -353,10 +358,7 @@ void finalize_stroke(void)
   // store the item on top of the layer stack
   ui.cur_layer->items = g_list_append(ui.cur_layer->items, ui.cur_item);
 
-  Item* viewingItem = malloc(sizeof(Item));
-  memcpy(viewingItem, ui.cur_item, sizeof(Item));
 
-  ui.cur_layer->viewItems = g_list_append(ui.cur_layer->items, ui.cur_item);
   ui.cur_layer->nitems++;
   ui.cur_item = NULL;
   ui.cur_item_type = ITEM_NONE;
@@ -372,6 +374,7 @@ void erase_stroke_portions(struct Item *item, double x, double y, double radius,
   struct Item *newhead, *newtail;
   gboolean need_recalc = FALSE;
 
+
   for (i=0, pt=item->path->coords; i<item->path->num_points; i++, pt+=2) {
     if (hypot(pt[0]-x, pt[1]-y) <= radius) { // found an intersection
       // FIXME: need to test if line SEGMENT hits the circle
@@ -379,6 +382,7 @@ void erase_stroke_portions(struct Item *item, double x, double y, double radius,
       if (erasure == NULL) {
         item->type = ITEM_TEMP_STROKE;
         gnome_canvas_item_hide(item->canvas_item);  
+        gnome_canvas_item_hide(item->canvas_item_view);
             /*  we'll use this hidden item as an insertion point later */
         erasure = (struct UndoErasureData *)g_malloc(sizeof(struct UndoErasureData));
         item->erasure = erasure;
@@ -397,22 +401,24 @@ void erase_stroke_portions(struct Item *item, double x, double y, double radius,
           newhead->path = gnome_canvas_points_new(i);
           g_memmove(newhead->path->coords, item->path->coords, 2*i*sizeof(double));
           if (newhead->brush.variable_width)
-            newhead->widths = (gdouble *)g_memdup(item->widths, (i-1)*sizeof(gdouble));
+            newhead->widths = (gdouble *) g_memdup(item->widths, (i-1)*sizeof(gdouble));
           else newhead->widths = NULL;
         }
         while (++i < item->path->num_points) {
           pt+=2;
           if (hypot(pt[0]-x, pt[1]-y) > radius) break;
         }
+
         if (i<item->path->num_points-1) {
           newtail = (struct Item *)g_malloc(sizeof(struct Item));
           newtail->type = ITEM_STROKE;
           g_memmove(&newtail->brush, &item->brush, sizeof(struct Brush));
           newtail->path = gnome_canvas_points_new(item->path->num_points-i);
+          
           g_memmove(newtail->path->coords, item->path->coords+2*i, 
                            2*(item->path->num_points-i)*sizeof(double));
           if (newtail->brush.variable_width)
-            newtail->widths = (gdouble *)g_memdup(item->widths+i, 
+            newtail->widths = (gdouble *) g_memdup(item->widths+i,
               (item->path->num_points-i-1)*sizeof(gdouble));
           else newtail->widths = NULL;
           newtail->canvas_item = NULL;
@@ -424,6 +430,8 @@ void erase_stroke_portions(struct Item *item, double x, double y, double radius,
         if (item->brush.variable_width) g_free(item->widths);
         if (item->canvas_item != NULL) 
           gtk_object_destroy(GTK_OBJECT(item->canvas_item));
+        if(item->canvas_item_view != NULL)
+            gtk_object_destroy(GTK_OBJECT(item->canvas_item_view));
         erasure->nrepl--;
         erasure->replacement_items = g_list_remove(erasure->replacement_items, item);
         g_free(item);
@@ -431,10 +439,14 @@ void erase_stroke_portions(struct Item *item, double x, double y, double radius,
       // add the new head
       if (newhead != NULL) {
         update_item_bbox(newhead);
-        make_canvas_item_one(ui.cur_layer->group, newhead);
-        make_canvas_item_one(ui.cur_layer->viewGroup, newhead);
+        make_canvas_item_one(ui.cur_layer->group, ui.cur_layer->viewGroup, newhead);
+
+        lower_canvas_item_to(ui.cur_layer->viewGroup,
+                  newhead->canvas_item_view, erasure->item->canvas_item_view);
+
         lower_canvas_item_to(ui.cur_layer->group,
                   newhead->canvas_item, erasure->item->canvas_item);
+
         erasure->replacement_items = g_list_prepend(erasure->replacement_items, newhead);
         erasure->nrepl++;
         // prepending ensures it won't get processed twice
@@ -451,12 +463,10 @@ void erase_stroke_portions(struct Item *item, double x, double y, double radius,
   // add the tail if needed
   if (!need_recalc) return;
   update_item_bbox(item);
-  make_canvas_item_one(ui.cur_layer->group, item);
-  make_canvas_item_one(ui.cur_layer->viewGroup, item);
-  lower_canvas_item_to(ui.cur_layer->viewGroup, item->canvas_item,
-                                      erasure->item->canvas_item);
-  lower_canvas_item_to(ui.cur_layer->group, item->canvas_item,
-                                      erasure->item->canvas_item);
+  make_canvas_item_one(ui.cur_layer->group, ui.cur_layer->viewGroup, item);
+
+  lower_canvas_item_to(ui.cur_layer->viewGroup, item->canvas_item_view, erasure->item->canvas_item_view);
+  lower_canvas_item_to(ui.cur_layer->    group, item->canvas_item     , erasure->item->canvas_item     );
 }
 
 
@@ -466,8 +476,13 @@ void do_eraser(GdkEvent *event, double radius, gboolean whole_strokes)
   GList *itemlist, *repllist;
   double pos[2];
   struct BBox eraserbox;
+
+
   
   get_pointer_coords(event, pos);
+
+  printf("erase(%2i,%2i) \n", pos[0], pos[1]);
+
   eraserbox.left = pos[0]-radius;
   eraserbox.right = pos[0]+radius;
   eraserbox.top = pos[1]-radius;
@@ -512,11 +527,16 @@ void finalize_erasure(void)
       gtk_object_destroy(GTK_OBJECT(item->canvas_item));
       item->canvas_item = NULL;
     }
+    if(item->canvas_item_view!=NULL){
+      gtk_object_destroy(GTK_OBJECT(item->canvas_item_view));
+      item->canvas_item_view = NULL;
+    }
     undo->erasurelist = g_list_append(undo->erasurelist, item->erasure);
     // add the new strokes into the current layer
     for (partlist = item->erasure->replacement_items; partlist!=NULL; partlist = partlist->next)
       ui.cur_layer->items = g_list_insert_before(
                       ui.cur_layer->items, itemlist, partlist->data);
+
     ui.cur_layer->nitems += item->erasure->nrepl-1;
   }
     
@@ -534,6 +554,7 @@ gboolean do_hand_scrollto(gpointer data)
 {
   ui.hand_scrollto_pending = FALSE;
   gnome_canvas_scroll_to(canvas, ui.hand_scrollto_cx, ui.hand_scrollto_cy);
+  gnome_canvas_scroll_to(viewCanvas, ui.hand_scrollto_cx, ui.hand_scrollto_cy);
   return FALSE;
 }
 
@@ -646,6 +667,7 @@ void end_text(void)
   gchar *new_text;
   struct UndoErasureData *erasure;
   GnomeCanvasItem *tmpitem;
+  GnomeCanvasItem *tmpitemView;
 
   if (ui.cur_item_type!=ITEM_TEXT) return; // nothing for us to do!
 
@@ -697,9 +719,14 @@ void end_text(void)
   ui.cur_item->widget = NULL;
   // replace the canvas item
   tmpitem = ui.cur_item->canvas_item;
-  make_canvas_item_one(ui.cur_layer->group, ui.cur_item);
+  tmpitemView = ui.cur_item->canvas_item_view;
+
+  make_canvas_item_one(ui.cur_layer->group, ui.cur_layer->viewGroup, ui.cur_item);
   update_item_bbox(ui.cur_item);
+
+  lower_canvas_item_to(ui.cur_layer->viewGroup, ui.cur_item->canvas_item_view, tmpitemView);
   lower_canvas_item_to(ui.cur_layer->group, ui.cur_item->canvas_item, tmpitem);
+
   gtk_object_destroy(GTK_OBJECT(tmpitem));
 }
 
