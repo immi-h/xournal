@@ -310,6 +310,9 @@ void remove_recognized_strokes(struct RecoSegment *rs, int num_old_items)
     erasure->nrepl = 0;
     erasure->replacement_items = NULL;
     undo->erasurelist = g_list_append(undo->erasurelist, erasure);
+
+    if (old_item->canvas_item_view != NULL)
+      gtk_object_destroy(GTK_OBJECT(old_item->canvas_item_view));
     if (old_item->canvas_item != NULL)
       gtk_object_destroy(GTK_OBJECT(old_item->canvas_item));
     ui.cur_layer->items = g_list_remove(ui.cur_layer->items, old_item);

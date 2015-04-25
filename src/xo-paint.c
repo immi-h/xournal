@@ -300,13 +300,23 @@ void continue_stroke(GdkEvent *event)
      into an internal structure */
 
   if (ui.cur_brush->ruler)
+  {
+    gnome_canvas_item_set(ui.cur_item->canvas_item_view, "points", &seg, NULL);
     gnome_canvas_item_set(ui.cur_item->canvas_item, "points", &seg, NULL);
+  }
   else
+  {
+    gnome_canvas_item_new((GnomeCanvasGroup *)ui.cur_item->canvas_item_view,
+       gnome_canvas_line_get_type(), "points", &seg,
+       "cap-style", GDK_CAP_ROUND, "join-style", GDK_JOIN_ROUND,
+       "fill-color-rgba", ui.cur_item->brush.color_rgba,
+       "width-units", current_width, NULL);
     gnome_canvas_item_new((GnomeCanvasGroup *)ui.cur_item->canvas_item,
        gnome_canvas_line_get_type(), "points", &seg,
        "cap-style", GDK_CAP_ROUND, "join-style", GDK_JOIN_ROUND,
        "fill-color-rgba", ui.cur_item->brush.color_rgba,
        "width-units", current_width, NULL);
+  }
 }
 
 void abort_stroke(void)
@@ -314,6 +324,7 @@ void abort_stroke(void)
   if (ui.cur_item_type != ITEM_STROKE || ui.cur_item == NULL) return;
   ui.cur_path.num_points = 0;
   gtk_object_destroy(GTK_OBJECT(ui.cur_item->canvas_item));
+  gtk_object_destroy(GTK_OBJECT(ui.cur_item->canvas_item_view));
   g_free(ui.cur_item);
   ui.cur_item = NULL;
   ui.cur_item_type = ITEM_NONE;
@@ -744,6 +755,7 @@ void update_text_item_displayfont(struct Item *item)
   if (item->type == ITEM_TEMP_TEXT)
     gtk_widget_modify_font(item->widget, font_desc);
   else {
+    gnome_canvas_item_set(item->canvas_item_view, "font-desc", font_desc, NULL);
     gnome_canvas_item_set(item->canvas_item, "font-desc", font_desc, NULL);
     update_item_bbox(item);
   }

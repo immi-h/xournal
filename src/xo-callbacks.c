@@ -842,6 +842,8 @@ on_editRedo_activate                   (GtkMenuItem     *menuitem,
         group = (GnomeCanvasGroup *) it->canvas_item->parent;
         viewGroup = (GnomeCanvasGroup *) it->canvas_item_view->parent;
         gtk_object_destroy(GTK_OBJECT(it->canvas_item));
+        gtk_object_destroy(GTK_OBJECT(it->canvas_item_view));
+
         make_canvas_item_one(group, viewGroup, it);
       }
     }
@@ -851,6 +853,7 @@ on_editRedo_activate                   (GtkMenuItem     *menuitem,
     redo->str = redo->item->text;
     redo->item->text = tmpstr;
     gnome_canvas_item_set(redo->item->canvas_item, "text", tmpstr, NULL);
+    gnome_canvas_item_set(redo->item->canvas_item_view, "text", tmpstr, NULL);
     update_item_bbox(redo->item);
   }
   else if (redo->type == ITEM_TEXT_ATTRIB) {
@@ -863,8 +866,11 @@ on_editRedo_activate                   (GtkMenuItem     *menuitem,
     g_memmove(&tmp_brush, redo->brush, sizeof(struct Brush));
     g_memmove(redo->brush, &(redo->item->brush), sizeof(struct Brush));
     g_memmove(&(redo->item->brush), &tmp_brush, sizeof(struct Brush));
-    gnome_canvas_item_set(redo->item->canvas_item, 
+    gnome_canvas_item_set(redo->item->canvas_item_view,
       "fill-color-rgba", redo->item->brush.color_rgba, NULL);
+    gnome_canvas_item_set(redo->item->canvas_item,
+      "fill-color-rgba", redo->item->brush.color_rgba, NULL);
+
     update_text_item_displayfont(redo->item);
     update_item_bbox(redo->item);
   }
