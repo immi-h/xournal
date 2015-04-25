@@ -662,7 +662,9 @@ void xoj_parser_start_element(GMarkupParseContext *context,
                 if (i > tmpJournal.last_attach_no) 
                   tmpJournal.last_attach_no = i;
             }
-            else tmpbg_filename = g_strdup(*attribute_values);
+            else
+                tmpbg_filename = g_strdup(*attribute_values);
+
             tmpPage->bg->pixbuf = gdk_pixbuf_new_from_file(tmpbg_filename, NULL);
             if (tmpPage->bg->pixbuf == NULL) {
               dialog = gtk_message_dialog_new(GTK_WINDOW(winMain), GTK_DIALOG_MODAL,
@@ -1347,7 +1349,7 @@ gboolean bgpdf_scheduler_callback(gpointer data)
   PopplerPage *pdfpage;
   gdouble height, width;
   int scaled_height, scaled_width;
-  GdkPixmap *pixmap;
+  GdkPixmap *pixmap, *pixmapFaded;
   cairo_t *cr;
 
   // if all requests have been cancelled, remove ourselves from main loop
@@ -1377,7 +1379,9 @@ gboolean bgpdf_scheduler_callback(gpointer data)
       cairo_destroy(cr);
       pixbuf = gdk_pixbuf_get_from_drawable(NULL, GDK_DRAWABLE(pixmap),
         NULL, 0, 0, 0, 0, scaled_width, scaled_height);
+
       g_object_unref(pixmap);
+
     }
     else { // directly poppler -> pixbuf: faster, but bitmap font bug
       pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB,
@@ -1392,6 +1396,15 @@ gboolean bgpdf_scheduler_callback(gpointer data)
 
   // process the generated pixbuf...
   if (pixbuf != NULL) { // success
+
+   GdkPixbuf* pixbufFaded = gdk_pixbuf_copy(pixbuf);
+
+    gdk_pixbuf_saturate_and_pixelate (
+        pixbuf,
+        pixbufFaded,
+        1.,
+        True
+    );
     while (req->pageno > bgpdf.npages) {
       bgpg = g_new(struct BgPdfPage, 1);
       bgpg->pixbuf = NULL;
@@ -1400,7 +1413,7 @@ gboolean bgpdf_scheduler_callback(gpointer data)
     }
     bgpg = g_list_nth_data(bgpdf.pages, req->pageno-1);
     if (bgpg->pixbuf!=NULL) g_object_unref(bgpg->pixbuf);
-    bgpg->pixbuf = pixbuf;
+    bgpg->pixbuf = pixbufFaded;
     bgpg->dpi = req->dpi;
     bgpg->pixel_height = scaled_height;
     bgpg->pixel_width = scaled_width;
