@@ -47,6 +47,7 @@ on_fileNew_activate                    (GtkMenuItem     *menuitem,
     ui.zoom = ui.startup_zoom;
     update_page_stuff();
     gtk_adjustment_set_value(gtk_layout_get_vadjustment(GTK_LAYOUT(canvas)), 0);
+    gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
     gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
   }
 }
@@ -109,6 +110,7 @@ on_fileNewBackground_activate          (GtkMenuItem     *menuitem,
   new_journal();
   ui.zoom = ui.startup_zoom;
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
+  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
   update_page_stuff();
   success = init_bgpdf(filename, TRUE, file_domain);
   set_cursor_busy(FALSE);
@@ -931,16 +933,26 @@ void do_view_modeswitch(int view_mode)
 
   if (ui.view_continuous == view_mode) return;
   ui.view_continuous = view_mode;
+
+  GtkAdjustment* v_adj_view = gtk_layout_get_vadjustment(GTK_LAYOUT(viewCanvas));
+  GtkAdjustment* h_adj_view = gtk_layout_get_hadjustment(GTK_LAYOUT(viewCanvas));
+
   v_adj = gtk_layout_get_vadjustment(GTK_LAYOUT(canvas));
   h_adj = gtk_layout_get_hadjustment(GTK_LAYOUT(canvas));
   pg = ui.cur_page;
   yscroll = gtk_adjustment_get_value(v_adj) - pg->voffset*ui.zoom;
   xscroll = gtk_adjustment_get_value(h_adj) - pg->hoffset*ui.zoom;
   update_page_stuff();
+
   gtk_adjustment_set_value(v_adj, yscroll + pg->voffset*ui.zoom);
   gtk_adjustment_set_value(h_adj, xscroll + pg->hoffset*ui.zoom);
+
+  gtk_adjustment_set_value(v_adj_view, yscroll + pg->voffset*ui.zoom);
+  gtk_adjustment_set_value(h_adj_view, xscroll + pg->hoffset*ui.zoom);
+
   // force a refresh
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
+  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
 }
 
 void
@@ -974,6 +986,7 @@ on_viewZoomIn_activate                 (GtkMenuItem     *menuitem,
 {
   if (ui.zoom > MAX_ZOOM) return;
   ui.zoom *= ui.zoom_step_factor;
+  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
   rescale_text_items();
   rescale_bg_pixmaps();
@@ -988,6 +1001,7 @@ on_viewZoomOut_activate                (GtkMenuItem     *menuitem,
   if (ui.zoom < MIN_ZOOM) return;
   ui.zoom /= ui.zoom_step_factor;
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
+  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
   rescale_text_items();
   rescale_bg_pixmaps();
   rescale_images();
@@ -999,7 +1013,7 @@ on_viewNormalSize_activate             (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
 {
   ui.zoom = DEFAULT_ZOOM;
-  gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
+  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
   rescale_text_items();
   rescale_bg_pixmaps();
   rescale_images();
@@ -1012,6 +1026,7 @@ on_viewPageWidth_activate              (GtkMenuItem     *menuitem,
 {
   ui.zoom = (GTK_WIDGET(canvas))->allocation.width/ui.cur_page->width;
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
+  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
   rescale_text_items();
   rescale_bg_pixmaps();
   rescale_images();
@@ -1571,6 +1586,7 @@ on_journalLoadBackground_activate      (GtkMenuItem     *menuitem,
   if (ui.zoom != DEFAULT_ZOOM) {
     ui.zoom = DEFAULT_ZOOM;
     gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
+    gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
     rescale_text_items();
     rescale_bg_pixmaps();
     rescale_images();
@@ -1618,6 +1634,7 @@ on_journalScreenshot_activate          (GtkMenuItem     *menuitem,
   if (ui.zoom != DEFAULT_ZOOM) {
     ui.zoom = DEFAULT_ZOOM;
     gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
+    gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
     rescale_text_items();
     rescale_bg_pixmaps();
     rescale_images();
@@ -3546,6 +3563,7 @@ on_viewSetZoom_activate                (GtkMenuItem     *menuitem,
     if (response == GTK_RESPONSE_OK || response == GTK_RESPONSE_APPLY) {
       ui.zoom = DEFAULT_ZOOM*zoom_percent/100;
       gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
+      gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
       rescale_text_items();
       rescale_bg_pixmaps();
       rescale_images();
