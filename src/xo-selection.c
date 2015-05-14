@@ -625,6 +625,8 @@ void selection_delete(void)
     item = (struct Item *)itemlist->data;
     if (item->canvas_item!=NULL)
       gtk_object_destroy(GTK_OBJECT(item->canvas_item));
+    if (item->canvas_item_view!=NULL)
+      gtk_object_destroy(GTK_OBJECT(item->canvas_item_view));
     erasure = g_new(struct UndoErasureData, 1);
     erasure->item = item;
     erasure->npos = g_list_index(ui.selection->layer->items, item);
