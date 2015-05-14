@@ -26,6 +26,7 @@
 #include "xo-shapes.h"
 #include "xo-paint.h"
 
+#define RECOGNIZER_DEBUG
 typedef struct Inertia {
   double mass, sx, sy, sxx, sxy, syy;
 } Inertia;

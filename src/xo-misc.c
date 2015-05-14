@@ -2132,6 +2132,7 @@ void move_journal_items_by(GList *itemlist, double dx, double dy,
         if (link != NULL) refitem = ((struct Item *)(link->data))->canvas_item;
         else refitem = NULL;
         lower_canvas_item_to(l2->group, item->canvas_item, refitem);
+        lower_canvas_item_to(l2->viewGroup, item->canvas_item_view, refitem);
       }
       depths = depths->next;
     }
@@ -2207,8 +2208,9 @@ void resize_journal_items_by(GList *itemlist, double scaling_x, double scaling_y
     // redraw the item
     if (item->canvas_item!=NULL) {
       group = (GnomeCanvasGroup *) item->canvas_item->parent;
-      viewGroup = (GnomeCanvasGroup *) item->canvas_item->parent;
+      viewGroup = (GnomeCanvasGroup *) item->canvas_item_view->parent;
       gtk_object_destroy(GTK_OBJECT(item->canvas_item));
+      gtk_object_destroy(GTK_OBJECT(item->canvas_item_view));
       make_canvas_item_one(group, viewGroup, item);
     }
   }

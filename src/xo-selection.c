@@ -456,9 +456,12 @@ void continue_movesel(GdkEvent *event)
       item = (struct Item *)list->data;
       if (item->canvas_item!=NULL)
         gnome_canvas_item_reparent(item->canvas_item, ui.selection->move_layer->group);
+      if (item->canvas_item_view!=NULL)
+        gnome_canvas_item_reparent(item->canvas_item_view, ui.selection->move_layer->viewGroup);
     }
     // avoid a refresh bug
     gnome_canvas_item_move(GNOME_CANVAS_ITEM(ui.selection->move_layer->group), 0., 0.);
+    gnome_canvas_item_move(GNOME_CANVAS_ITEM(ui.selection->move_layer->viewGroup), 0., 0.);
     if (ui.cur_item_type == ITEM_MOVESEL_VERT)
       gnome_canvas_item_set(ui.selection->canvas_item,
         "x2", tmppage->width+100, 
@@ -484,6 +487,8 @@ void continue_movesel(GdkEvent *event)
     item = (struct Item *)list->data;
     if (item->canvas_item != NULL)
       gnome_canvas_item_move(item->canvas_item, dx, dy);
+    if (item->canvas_item_view != NULL)
+      gnome_canvas_item_move(item->canvas_item_view, dx, dy);
   }
 }
 
