@@ -600,6 +600,10 @@ void resize_textview(gpointer *toplevel, gpointer *data)
     w = GTK_TEXT_VIEW(ui.cur_item->widget);
     width = w->width + WIDGET_RIGHT_MARGIN;
     height = w->height;
+    gnome_canvas_item_set(ui.cur_item->canvas_item_view,
+                          "size-pixels", TRUE,
+                          "width", (gdouble)width, "height", (gdouble)height, NULL);
+
     gnome_canvas_item_set(ui.cur_item->canvas_item,
                           "size-pixels", TRUE,
                           "width", (gdouble)width, "height", (gdouble)height, NULL);
@@ -609,6 +613,7 @@ void resize_textview(gpointer *toplevel, gpointer *data)
 
 void start_text(GdkEvent *event, struct Item *item)
 {
+    fprintf(stderr, "START_TEXT\n");
     double pt[2];
     GtkTextBuffer *buffer;
     GnomeCanvasItem *canvas_item;
@@ -624,6 +629,7 @@ void start_text(GdkEvent *event, struct Item *item)
         item = g_new(struct Item, 1);
         item->text = NULL;
         item->canvas_item = NULL;
+        item->canvas_item_view = NULL;
         item->bbox.left = pt[0];
         item->bbox.top = pt[1];
         item->bbox.right = ui.cur_page->width;
@@ -642,20 +648,28 @@ void start_text(GdkEvent *event, struct Item *item)
     pango_font_description_set_absolute_size(font_desc,
                                              item->font_size*ui.zoom*PANGO_SCALE);
     item->widget = gtk_text_view_new();
+    item->widget_view = gtk_text_view_new();
+
     buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(item->widget));
+    gtk_text_view_set_buffer(GTK_TEXT_VIEW(item->widget_view), buffer);
+
     if (item->text!=NULL)
         gtk_text_buffer_set_text(buffer, item->text, -1);
     gtk_widget_modify_font(item->widget, font_desc);
+    gtk_widget_modify_font(item->widget_view, font_desc);
+
     rgb_to_gdkcolor(item->brush.color_rgba, &color);
+
     gtk_widget_modify_text(item->widget, GTK_STATE_NORMAL, &color);
+    gtk_widget_modify_text(item->widget_view, GTK_STATE_NORMAL, &color);
     pango_font_description_free(font_desc);
 
-    canvas_item_view = gnome_canvas_item_new(ui.cur_layer->group,
+    canvas_item_view = gnome_canvas_item_new(ui.cur_layer->viewGroup,
                                              gnome_canvas_widget_get_type(),
                                              "x", item->bbox.left, "y", item->bbox.top,
                                              "width", item->bbox.right-item->bbox.left,
                                              "height", item->bbox.bottom-item->bbox.top,
-                                             "widget", item->widget, NULL);
+                                             "widget", item->widget_view, NULL);
     canvas_item = gnome_canvas_item_new(ui.cur_layer->group,
                                         gnome_canvas_widget_get_type(),
                                         "x", item->bbox.left, "y", item->bbox.top,
@@ -675,6 +689,7 @@ void start_text(GdkEvent *event, struct Item *item)
     item->canvas_item = canvas_item_view;
 
     gtk_widget_show(item->widget);
+    gtk_widget_show(item->widget_view);
     ui.resize_signal_handler =
             g_signal_connect((gpointer) winMain, "check_resize",
                              G_CALLBACK(resize_textview), NULL);
@@ -686,6 +701,7 @@ void start_text(GdkEvent *event, struct Item *item)
 
 void end_text(void)
 {
+    printf("END TEXT\n");
     GtkTextBuffer *buffer;
     GtkTextIter start, end;
     gchar *new_text;
@@ -704,11 +720,13 @@ void end_text(void)
     gtk_widget_set_sensitive(GET_COMPONENT("editPaste"), TRUE);
     gtk_widget_set_sensitive(GET_COMPONENT("buttonPaste"), TRUE);
 
-    if (strlen(new_text)==0) { // erase object and cancel
+    if ((*new_text)==0) { // erase object and cancel
         g_free(new_text);
         g_signal_handler_disconnect(winMain, ui.resize_signal_handler);
         gtk_object_destroy(GTK_OBJECT(ui.cur_item->canvas_item));
+        gtk_object_destroy(GTK_OBJECT(ui.cur_item->canvas_item_view));
         ui.cur_item->canvas_item = NULL;
+        ui.cur_item->canvas_item_view = NULL;
         if (ui.cur_item->text == NULL) // nothing happened
             g_free(ui.cur_item->font_name);
         else { // treat this as an erasure
@@ -741,9 +759,11 @@ void end_text(void)
 
     ui.cur_item->text = new_text;
     ui.cur_item->widget = NULL;
+    ui.cur_item->widget_view = NULL;
     // replace the canvas item
     tmpitem = ui.cur_item->canvas_item;
     tmpitemView = ui.cur_item->canvas_item_view;
+
 
     make_canvas_item_one(ui.cur_layer->group, ui.cur_layer->viewGroup, ui.cur_item);
     update_item_bbox(ui.cur_item);
@@ -751,7 +771,10 @@ void end_text(void)
     lower_canvas_item_to(ui.cur_layer->viewGroup, ui.cur_item->canvas_item_view, tmpitemView);
     lower_canvas_item_to(ui.cur_layer->group, ui.cur_item->canvas_item, tmpitem);
 
+
+
     gtk_object_destroy(GTK_OBJECT(tmpitem));
+    gtk_object_destroy(GTK_OBJECT(tmpitemView));
 }
 
 /* update the items in the canvas so they're of the right font size */
@@ -766,7 +789,10 @@ void update_text_item_displayfont(struct Item *item)
     pango_font_description_set_absolute_size(font_desc,
                                              item->font_size*ui.zoom*PANGO_SCALE);
     if (item->type == ITEM_TEMP_TEXT)
+    {
+        gtk_widget_modify_font(item->widget_view, font_desc);
         gtk_widget_modify_font(item->widget, font_desc);
+    }
     else {
         gnome_canvas_item_set(item->canvas_item_view, "font-desc", font_desc, NULL);
         gnome_canvas_item_set(item->canvas_item, "font-desc", font_desc, NULL);

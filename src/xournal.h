@@ -179,6 +179,7 @@ typedef struct Item {
   gchar *font_name;
   gdouble font_size;
   GtkWidget *widget; // the widget while text is being edited (ITEM_TEMP_TEXT)
+  GtkWidget *widget_view; // the widget while text is being edited (ITEM_TEMP_TEXT)
   // the following fields for ITEM_IMAGE:
   GdkPixbuf *image;  // the image
   gchar *image_png;  // PNG of original image, for save and clipboard
