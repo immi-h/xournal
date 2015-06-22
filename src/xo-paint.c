@@ -686,7 +686,7 @@ void start_text(GdkEvent *event, struct Item *item)
         gtk_object_destroy(GTK_OBJECT(item->canvas_item));
     }
     item->canvas_item = canvas_item;
-    item->canvas_item = canvas_item_view;
+    item->canvas_item_view = canvas_item_view;
 
     gtk_widget_show(item->widget);
     gtk_widget_show(item->widget_view);
