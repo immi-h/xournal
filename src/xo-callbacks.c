@@ -991,6 +991,7 @@ on_viewZoomIn_activate                 (GtkMenuItem     *menuitem,
   rescale_text_items();
   rescale_bg_pixmaps();
   rescale_images();
+  copyScrollPosition();
 }
 
 
@@ -1005,6 +1006,7 @@ on_viewZoomOut_activate                (GtkMenuItem     *menuitem,
   rescale_text_items();
   rescale_bg_pixmaps();
   rescale_images();
+  copyScrollPosition();
 }
 
 
@@ -1017,6 +1019,7 @@ on_viewNormalSize_activate             (GtkMenuItem     *menuitem,
   rescale_text_items();
   rescale_bg_pixmaps();
   rescale_images();
+
 }
 
 
@@ -3016,6 +3019,10 @@ on_vscroll_changed                     (GtkAdjustment   *adjustment,
   double viewport_top, viewport_bottom;
   struct Page *tmppage;
   
+
+
+  copyScrollPosition();
+
   if (ui.view_continuous!=VIEW_MODE_CONTINUOUS) return;
   
   if (ui.progressive_bg) rescale_bg_pixmaps();

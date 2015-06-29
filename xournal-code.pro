@@ -1,6 +1,6 @@
 TEMPLATE = app
 CONFIG -= app_bundle
-CONFIG -= qt
+CONFIG -= qt link_pkgconfig
 
 PKGCONFIG += gtk-2.0 libgnomecanvas-2.0
 

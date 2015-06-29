@@ -138,6 +138,11 @@ wrapper_poppler_page_render_to_pixbuf (PopplerPage *page,
 			       double scale,
 			       int rotation,
 			       GdkPixbuf *pixbuf);
+/**
+ * @brief copyScrollPosition copies the scroll position from the main window to the viewing window
+ *
+ */
+void copyScrollPosition();
 
 // defines for paper rulings
 

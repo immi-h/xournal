@@ -848,13 +848,14 @@ void update_canvas_bg(struct Page *pg)
   int w, h;
   gboolean is_well_scaled;
   
+  if (pg->bg->canvas_item != NULL)
+    gtk_object_destroy(GTK_OBJECT(pg->bg->canvas_item));
+  pg->bg->canvas_item = NULL;
+
   if (pg->bg->canvas_item_view != NULL)
     gtk_object_destroy(GTK_OBJECT(pg->bg->canvas_item_view));
   pg->bg->canvas_item_view = NULL;
 
-  if (pg->bg->canvas_item != NULL)
-    gtk_object_destroy(GTK_OBJECT(pg->bg->canvas_item));
-  pg->bg->canvas_item = NULL;
   
   if (pg->bg->type == BG_SOLID)
   {
@@ -1560,6 +1561,7 @@ void do_switch_page(int pg, gboolean rescroll, gboolean refresh_all)
       gnome_canvas_item_move(GNOME_CANVAS_ITEM(ui.cur_page->group), 0., 0.);
     }
   }
+  copyScrollPosition();
 }
 
 void update_page_stuff(void)
@@ -1761,6 +1763,7 @@ void update_page_stuff(void)
 
   gtk_widget_set_sensitive(GET_COMPONENT("editPaste"), ui.cur_layer!=NULL);
   gtk_widget_set_sensitive(GET_COMPONENT("buttonPaste"), ui.cur_layer!=NULL);
+  copyScrollPosition();
 }
 
 void update_toolbar_and_menu(void)
@@ -2586,16 +2589,14 @@ gboolean intercept_activate_events(GtkWidget *w, GdkEvent *ev, gpointer data)
     if (ev->key.keyval == GDK_Escape) 
        gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), ui.pageno+1); // abort
     else if (ev->key.keyval != GDK_Tab && ev->key.keyval != GDK_ISO_Left_Tab)
-       return FALSE; // let the spin button process it
-  }
+        return FALSE; // let the spin button process it
+   }
 
-  // otherwise, we want to make sure the canvas or text item gets focus back...
-  reset_focus();  
-  return FALSE;
-}
-
-void install_focus_hooks(GtkWidget *w, gpointer data)
-{
+   // otherwise, we want to make sure the canvas or text item gets focus back...
+   reset_focus();
+   return FALSE;
+ }
+ void install_focus_hooks(GtkWidget *w, gpointer data) {
   if (w == NULL) return;
   g_signal_connect(w, "key-press-event", G_CALLBACK(intercept_activate_events), data);
   g_signal_connect(w, "button-press-event", G_CALLBACK(intercept_activate_events), data);
@@ -2695,4 +2696,26 @@ wrapper_poppler_page_render_to_pixbuf (PopplerPage *page,
 
   wrapper_copy_cairo_surface_to_pixbuf (surface, pixbuf);
   cairo_surface_destroy (surface);
+}
+
+/**
+ * @brief copyScrollPosition copies the scroll position of the main window to the viewing window
+ *
+ */
+void copyScrollPosition()
+{
+  fprintf(stderr, "DEBUG: copy scroll\n");
+  GtkAdjustment* mainAdj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(GET_COMPONENT("scrolledwindowMain")));
+  GtkAdjustment* viewAdj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scrolledWindowView));
+
+  float pageSize = (gtk_adjustment_get_page_size(mainAdj)/2);
+  float pageSizeView = (gtk_adjustment_get_page_size(mainAdj)/2);
+
+  double value = gtk_adjustment_get_value(mainAdj) + (gtk_adjustment_get_page_size(mainAdj)/2);
+
+  fprintf(stderr, "pageSize: %f\n", pageSize);
+  fprintf(stderr, "pageSizeView: %f\n", pageSizeView);
+  fprintf(stderr, "value: %f\n", value);
+
+  gtk_adjustment_set_value(viewAdj, value - (gtk_adjustment_get_page_size(viewAdj)/2));
 }

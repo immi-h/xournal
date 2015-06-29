@@ -171,7 +171,11 @@ void init_stuff (int argc, char *argv[])
      GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK |
      GDK_PROXIMITY_IN_MASK | GDK_PROXIMITY_OUT_MASK);
   gnome_canvas_set_pixels_per_unit (canvas, ui.zoom);
+  gnome_canvas_set_pixels_per_unit (viewCanvas, ui.zoom);
   gnome_canvas_set_center_scroll_region (canvas, TRUE);
+  gnome_canvas_set_center_scroll_region (viewCanvas, TRUE);
+  gtk_layout_get_hadjustment(GTK_LAYOUT (viewCanvas))->step_increment = ui.scrollbar_step_increment;
+  gtk_layout_get_vadjustment(GTK_LAYOUT (viewCanvas))->step_increment = ui.scrollbar_step_increment;
   gtk_layout_get_hadjustment(GTK_LAYOUT (canvas))->step_increment = ui.scrollbar_step_increment;
   gtk_layout_get_vadjustment(GTK_LAYOUT (canvas))->step_increment = ui.scrollbar_step_increment;
 

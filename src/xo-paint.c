@@ -566,7 +566,7 @@ gboolean do_hand_scrollto(gpointer data)
 {
     ui.hand_scrollto_pending = FALSE;
     gnome_canvas_scroll_to(canvas, ui.hand_scrollto_cx, ui.hand_scrollto_cy);
-    gnome_canvas_scroll_to(viewCanvas, ui.hand_scrollto_cx, ui.hand_scrollto_cy);
+    copyScrollPosition();
     return FALSE;
 }
 
