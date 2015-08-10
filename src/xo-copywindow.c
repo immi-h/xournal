@@ -68,7 +68,7 @@ GnomeCanvasItem* viewIndicatorItem;
 
 void create_viewIndicator()
 {
-  viewIndicatorItem = gnome_canvas_item_new(ui.cur_layer->group,
+  viewIndicatorItem = gnome_canvas_item_new(gnome_canvas_root(canvas),
       gnome_canvas_rect_get_type(),
       "width-pixels", 5,
       "outline-color-rgba", 0x00110080,
