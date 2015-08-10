@@ -1091,8 +1091,9 @@ gboolean open_journal(char *filename)
     while (bgpdf.status != STATUS_NOT_INIT) gtk_main_iteration();
     new_journal();
     ui.zoom = ui.startup_zoom;
+    ui.zoomView = ui.zoom;
     gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-    gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
+    gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
     update_page_stuff();
     return init_bgpdf(filename, TRUE, DOMAIN_ABSOLUTE);
   }
@@ -1150,9 +1151,10 @@ gboolean open_journal(char *filename)
   ui.layerno = ui.cur_page->nlayers-1;
   ui.cur_layer = (struct Layer *)(g_list_last(ui.cur_page->layers)->data);
   ui.zoom = ui.startup_zoom;
+  ui.zoomView = ui.zoom;
   update_file_name(g_strdup(filename));
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
+  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
   make_canvas_items();
   update_page_stuff();
   rescale_bg_pixmaps(); // this requests the PDF pages if need be
@@ -1711,6 +1713,7 @@ void init_config_default(void)
 
   DEFAULT_ZOOM = DISPLAY_DPI_DEFAULT/72.0;
   ui.zoom = ui.startup_zoom = 1.0*DEFAULT_ZOOM;
+  ui.zoomView = ui.zoom;
   ui.default_page.height = 792.0;
   ui.default_page.width = 612.0;
   ui.default_page.bg->type = BG_SOLID;

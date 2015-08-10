@@ -462,6 +462,13 @@ on_optionsUseXInput_activate           (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
 void
+on_vscroll_view_changed                (GtkAdjustment   *adjustment,
+                                        gpointer        user_data);
+void
+on_hscroll_view_changed                (GtkAdjustment   *adjustment,
+                                        gpointer        user_data);
+
+void
 on_vscroll_changed                     (GtkAdjustment   *adjustment,
                                         gpointer        user_data);
 
