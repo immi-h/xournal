@@ -434,6 +434,7 @@ void erase_stroke_portions(struct Item *item, double x, double y, double radius,
                                                                (item->path->num_points-i-1)*sizeof(gdouble));
                     else newtail->widths = NULL;
                     newtail->canvas_item = NULL;
+                    newtail->canvas_item_view = NULL;
                 }
             }
             if (item->type == ITEM_STROKE) {
