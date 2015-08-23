@@ -387,7 +387,7 @@ void start_vertspace(GdkEvent *event)
       gnome_canvas_rect_get_type(), "width-pixels", 1, 
       "outline-color-rgba", 0x000000ff,
       "fill-color-rgba", 0x80808040,
-      "x1", -100.0, "x2", ui.cur_page->width+100, "y1", pt[1], "y2", pt[1], NULL);
+      "x1", -100.0, "x2", ui.cur_page->width+101, "y1", pt[1], "y2", pt[1], NULL);
   update_cursor();
 }
 

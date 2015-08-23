@@ -252,6 +252,12 @@ typedef struct Selection {
   float move_pagedelta;
 } Selection;
 
+typedef struct ViewIndicator{
+    BBox bbox;
+    GnomeCanvasItem* canvas_item;
+
+} ViewIndicator;
+
 typedef struct UIData {
   int pageno, layerno; // the current page and layer
   struct Page *cur_page;
@@ -280,6 +286,7 @@ typedef struct UIData {
   int cur_path_storage_alloc;
   int cur_widths_storage_alloc;
   double zoom; // zoom factor, in pixels per pt
+  double zoomView; // zoom factor, in pixels per pt
   gboolean use_xinput; // use input devices instead of core pointer
   gboolean allow_xinput; // allow use of xinput ?
   gboolean discard_corepointer; // discard core pointer events in XInput mode
@@ -344,6 +351,7 @@ typedef struct UIData {
 #endif
   gboolean poppler_force_cairo; // force poppler to use cairo
   gboolean warned_generate_fontconfig; // for win32 fontconfig cache
+  struct ViewIndicator viewIndicator;
 } UIData;
 
 #define BRUSH_LINKED 0
@@ -426,6 +434,7 @@ typedef struct BgPdf {
 // the main window and the canvas
 
 extern GtkWidget *winMain;
+extern GtkWidget *winView;
 extern GnomeCanvas *canvas;
 extern GnomeCanvas *viewCanvas;
 extern GtkWidget *scrolledWindowView;

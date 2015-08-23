@@ -30,6 +30,7 @@
 #include "xo-file.h"
 #include "xo-paint.h"
 #include "xo-shapes.h"
+#include "xo-copywindow.h"
 
 GtkWidget *winMain;
 GnomeCanvas *canvas;
@@ -171,7 +172,7 @@ void init_stuff (int argc, char *argv[])
      GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK |
      GDK_PROXIMITY_IN_MASK | GDK_PROXIMITY_OUT_MASK);
   gnome_canvas_set_pixels_per_unit (canvas, ui.zoom);
-  gnome_canvas_set_pixels_per_unit (viewCanvas, ui.zoom);
+  gnome_canvas_set_pixels_per_unit (viewCanvas, ui.zoomView);
   gnome_canvas_set_center_scroll_region (canvas, TRUE);
   gnome_canvas_set_center_scroll_region (viewCanvas, TRUE);
   gtk_layout_get_hadjustment(GTK_LAYOUT (viewCanvas))->step_increment = ui.scrollbar_step_increment;
@@ -208,6 +209,12 @@ void init_stuff (int argc, char *argv[])
                     NULL);
   g_signal_connect ((gpointer) canvas, "motion_notify_event",
                     G_CALLBACK (on_canvas_motion_notify_event),
+                    NULL);
+  g_signal_connect ((gpointer) gtk_layout_get_hadjustment(GTK_LAYOUT(viewCanvas)),
+                    "value-changed", G_CALLBACK (on_hscroll_view_changed),
+                    NULL);
+  g_signal_connect ((gpointer) gtk_layout_get_vadjustment(GTK_LAYOUT(viewCanvas)),
+                    "value-changed", G_CALLBACK (on_vscroll_view_changed),
                     NULL);
   g_signal_connect ((gpointer) gtk_layout_get_vadjustment(GTK_LAYOUT(canvas)),
                     "value-changed", G_CALLBACK (on_vscroll_changed),
@@ -309,6 +316,7 @@ void init_stuff (int argc, char *argv[])
       NULL);
   }
 
+  create_viewIndicator();
   // load the MRU
   
   init_mru();
@@ -368,10 +376,12 @@ main (int argc, char *argv[])
    * the project. Delete any components that you don't want shown initially.
    */
   winMain = create_winMain ();
-  
+
+  winView = create_winView();
   init_stuff (argc, argv);
+
   gtk_window_set_icon(GTK_WINDOW(winMain), create_pixbuf("xournal.png"));
-  
+
   gtk_main ();
   
   if (bgpdf.status != STATUS_NOT_INIT) shutdown_bgpdf();

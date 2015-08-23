@@ -105,7 +105,8 @@ am_xournal_OBJECTS = main.$(OBJEXT) xo-misc.$(OBJEXT) \
 	xo-file.$(OBJEXT) xo-paint.$(OBJEXT) xo-selection.$(OBJEXT) \
 	xo-clipboard.$(OBJEXT) xo-image.$(OBJEXT) xo-print.$(OBJEXT) \
 	xo-support.$(OBJEXT) xo-interface.$(OBJEXT) \
-	xo-callbacks.$(OBJEXT) xo-shapes.$(OBJEXT)
+	xo-callbacks.$(OBJEXT) xo-shapes.$(OBJEXT) \
+	xo-copywindow.$(OBJEXT)
 xournal_OBJECTS = $(am_xournal_OBJECTS)
 am__DEPENDENCIES_1 =
 xournal_DEPENDENCIES = ttsubset/libttsubset.a \
@@ -252,7 +253,7 @@ LDFLAGS =  -lz -lm
 LIBOBJS = 
 LIBS = 
 LTLIBOBJS = 
-MAINT = 
+MAINT = #
 MAKEINFO = ${SHELL} /home/david/sourcery/xournalDouble/missing makeinfo
 MKDIR_P = /usr/bin/mkdir -p
 MKINSTALLDIRS = ./mkinstalldirs
@@ -353,7 +354,8 @@ xournal_SOURCES = \
 	xo-support.c xo-support.h \
 	xo-interface.c xo-interface.h \
 	xo-callbacks.c xo-callbacks.h \
-	xo-shapes.c xo-shapes.h
+	xo-shapes.c xo-shapes.h \
+	xo-copywindow.c xo-copywindow.h
 
 #xournal_LDFLAGS = -mwindows
 xournal_LDADD = ttsubset/libttsubset.a -lgnomecanvas-2 -lart_lgpl_2 -lgtk-x11-2.0 -lgdk-x11-2.0 -lpangocairo-1.0 -latk-1.0 -lgdk_pixbuf-2.0 -lpoppler-glib -lgio-2.0 -lcairo -lpangoft2-1.0 -lpango-1.0 -lgobject-2.0 -lglib-2.0 -lfontconfig -lfreetype  $(INTLLIBS) -lX11 -lz -lm
@@ -362,7 +364,7 @@ all: all-recursive
 
 .SUFFIXES:
 .SUFFIXES: .c .o .obj
-$(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
+$(srcdir)/Makefile.in: # $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
 	    *$$dep*) \
@@ -386,9 +388,9 @@ Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 $(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 
-$(top_srcdir)/configure:  $(am__configure_deps)
+$(top_srcdir)/configure: # $(am__configure_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
-$(ACLOCAL_M4):  $(am__aclocal_m4_deps)
+$(ACLOCAL_M4): # $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
 install-binPROGRAMS: $(bin_PROGRAMS)
@@ -447,6 +449,7 @@ distclean-compile:
 include ./$(DEPDIR)/main.Po
 include ./$(DEPDIR)/xo-callbacks.Po
 include ./$(DEPDIR)/xo-clipboard.Po
+include ./$(DEPDIR)/xo-copywindow.Po
 include ./$(DEPDIR)/xo-file.Po
 include ./$(DEPDIR)/xo-image.Po
 include ./$(DEPDIR)/xo-interface.Po

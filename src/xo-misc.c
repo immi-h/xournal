@@ -33,6 +33,7 @@
 #include "xo-paint.h"
 #include "xo-shapes.h"
 #include "xo-image.h"
+#include "xo-copywindow.h"
 
 // some global constants
 
@@ -637,7 +638,12 @@ void make_page_clipbox(struct Page *pg)
   gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->viewingGroup), "path", pg_clip, NULL);
   gnome_canvas_path_def_unref(pg_clip);
 }
-
+/**
+ * @brief make_canvas_item_one adds a canvasItem to the given item.
+ * @param group the canvasGroup to append the item to
+ * @param viewGroup the canvas group to append the duplicate item to for the viewing window.
+ * @param item the `Item` to be processed
+ */
 void make_canvas_item_one(GnomeCanvasGroup *group, GnomeCanvasGroup* viewGroup, struct Item *item)
 {
   PangoFontDescription *font_desc;
@@ -1554,7 +1560,7 @@ void do_switch_page(int pg, gboolean rescroll, gboolean refresh_all)
 
     if (refresh_all) {
       gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-      gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
+      gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
     }
     else if (!ui.view_continuous){
       gnome_canvas_item_move(GNOME_CANVAS_ITEM(ui.cur_page->viewingGroup), 0., 0.);
@@ -2696,26 +2702,4 @@ wrapper_poppler_page_render_to_pixbuf (PopplerPage *page,
 
   wrapper_copy_cairo_surface_to_pixbuf (surface, pixbuf);
   cairo_surface_destroy (surface);
-}
-
-/**
- * @brief copyScrollPosition copies the scroll position of the main window to the viewing window
- *
- */
-void copyScrollPosition()
-{
-  fprintf(stderr, "DEBUG: copy scroll\n");
-  GtkAdjustment* mainAdj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(GET_COMPONENT("scrolledwindowMain")));
-  GtkAdjustment* viewAdj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scrolledWindowView));
-
-  float pageSize = (gtk_adjustment_get_page_size(mainAdj)/2);
-  float pageSizeView = (gtk_adjustment_get_page_size(mainAdj)/2);
-
-  double value = gtk_adjustment_get_value(mainAdj) + (gtk_adjustment_get_page_size(mainAdj)/2);
-
-  fprintf(stderr, "pageSize: %f\n", pageSize);
-  fprintf(stderr, "pageSizeView: %f\n", pageSizeView);
-  fprintf(stderr, "value: %f\n", value);
-
-  gtk_adjustment_set_value(viewAdj, value - (gtk_adjustment_get_page_size(viewAdj)/2));
 }

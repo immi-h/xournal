@@ -36,6 +36,8 @@
 #include "xo-selection.h"
 #include "xo-print.h"
 #include "xo-shapes.h"
+#include "xo-copywindow.h"
+
 
 void
 on_fileNew_activate                    (GtkMenuItem     *menuitem,
@@ -45,9 +47,10 @@ on_fileNew_activate                    (GtkMenuItem     *menuitem,
   if (close_journal()) {
     new_journal();
     ui.zoom = ui.startup_zoom;
+    ui.zoomView=ui.zoom;
     update_page_stuff();
     gtk_adjustment_set_value(gtk_layout_get_vadjustment(GTK_LAYOUT(canvas)), 0);
-    gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
+    gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
     gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
   }
 }
@@ -109,8 +112,9 @@ on_fileNewBackground_activate          (GtkMenuItem     *menuitem,
   }
   new_journal();
   ui.zoom = ui.startup_zoom;
+  ui.zoomView = ui.startup_zoom;
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
+  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
   update_page_stuff();
   success = init_bgpdf(filename, TRUE, file_domain);
   set_cursor_busy(FALSE);
@@ -499,6 +503,7 @@ on_editUndo_activate                   (GtkMenuItem     *menuitem,
       undo->bg = tmp_bg;
       undo->page->bg->canvas_item = undo->bg->canvas_item;
       undo->bg->canvas_item = NULL;
+      undo->bg->canvas_item_view = NULL;
     }
     if (undo->type != ITEM_NEW_BG_ONE) {
       tmp_x = undo->page->width;
@@ -529,6 +534,7 @@ on_editUndo_activate                   (GtkMenuItem     *menuitem,
       // also destroys the background and layer's canvas items
     undo->page->group = NULL;
     undo->page->bg->canvas_item = NULL;
+    undo->page->bg->canvas_item_view = NULL;
     journal.pages = g_list_remove(journal.pages, undo->page);
     journal.npages--;
     if (ui.cur_page == undo->page) ui.cur_page = NULL;
@@ -741,6 +747,7 @@ on_editRedo_activate                   (GtkMenuItem     *menuitem,
   else if (redo->type == ITEM_NEW_PAGE) {
     // remap the page
     redo->page->bg->canvas_item = NULL;
+    redo->page->bg->canvas_item_view = NULL;
     redo->page->group = (GnomeCanvasGroup *) gnome_canvas_item_new(
       gnome_canvas_root(canvas), gnome_canvas_clipgroup_get_type(), NULL);
     make_page_clipbox(redo->page);
@@ -757,7 +764,7 @@ on_editRedo_activate                   (GtkMenuItem     *menuitem,
     // unmap all the canvas items
     gtk_object_destroy(GTK_OBJECT(redo->page->group));
     redo->page->group = NULL;
-    redo->page->bg->canvas_item = NULL;
+    redo->page->bg->canvas_item_view = NULL;
     for (list = redo->page->layers; list!=NULL; list = list->next) {
       l = (struct Layer *)list->data;
       for (itemlist = l->items; itemlist!=NULL; itemlist = itemlist->next)
@@ -952,7 +959,7 @@ void do_view_modeswitch(int view_mode)
 
   // force a refresh
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
+  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
 }
 
 void
@@ -986,7 +993,8 @@ on_viewZoomIn_activate                 (GtkMenuItem     *menuitem,
 {
   if (ui.zoom > MAX_ZOOM) return;
   ui.zoom *= ui.zoom_step_factor;
-  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
+  ui.zoomView = ui.zoom;
+  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
   rescale_text_items();
   rescale_bg_pixmaps();
@@ -1001,8 +1009,9 @@ on_viewZoomOut_activate                (GtkMenuItem     *menuitem,
 {
   if (ui.zoom < MIN_ZOOM) return;
   ui.zoom /= ui.zoom_step_factor;
+  ui.zoomView = ui.zoom;
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
+  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
   rescale_text_items();
   rescale_bg_pixmaps();
   rescale_images();
@@ -1015,7 +1024,8 @@ on_viewNormalSize_activate             (GtkMenuItem     *menuitem,
                                         gpointer         user_data)
 {
   ui.zoom = DEFAULT_ZOOM;
-  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
+  ui.zoomView = DEFAULT_ZOOM;
+  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
   rescale_text_items();
   rescale_bg_pixmaps();
   rescale_images();
@@ -1029,7 +1039,7 @@ on_viewPageWidth_activate              (GtkMenuItem     *menuitem,
 {
   ui.zoom = (GTK_WIDGET(canvas))->allocation.width/ui.cur_page->width;
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
+  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
   rescale_text_items();
   rescale_bg_pixmaps();
   rescale_images();
@@ -1186,6 +1196,7 @@ on_journalDeletePage_activate          (GtkMenuItem     *menuitem,
   gtk_object_destroy(GTK_OBJECT(ui.cur_page->group));
   ui.cur_page->group = NULL;
   ui.cur_page->bg->canvas_item = NULL;
+  ui.cur_page->bg->canvas_item_view = NULL;
   for (layerlist = ui.cur_page->layers; layerlist!=NULL; layerlist = layerlist->next) {
     l = (struct Layer *)layerlist->data;
     for (itemlist = l->items; itemlist!=NULL; itemlist = itemlist->next)
@@ -1590,7 +1601,7 @@ on_journalLoadBackground_activate      (GtkMenuItem     *menuitem,
   if (ui.zoom != DEFAULT_ZOOM) {
     ui.zoom = DEFAULT_ZOOM;
     gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-    gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
+    gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
     rescale_text_items();
     rescale_bg_pixmaps();
     rescale_images();
@@ -1638,7 +1649,7 @@ on_journalScreenshot_activate          (GtkMenuItem     *menuitem,
   if (ui.zoom != DEFAULT_ZOOM) {
     ui.zoom = DEFAULT_ZOOM;
     gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-    gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
+    gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
     rescale_text_items();
     rescale_bg_pixmaps();
     rescale_images();
@@ -2465,7 +2476,7 @@ on_canvas_button_press_event           (GtkWidget       *widget,
       else if (event->button == 6) scroll_event.scroll.direction = GDK_SCROLL_LEFT;
       else scroll_event.scroll.direction = GDK_SCROLL_RIGHT;
       gtk_widget_event(GET_COMPONENT("scrolledwindowMain"), &scroll_event);
-      gtk_widget_event(scrolledWindowView, &scroll_event);
+      //gtk_widget_event(scrolledWindowView, &scroll_event);
     }
     return FALSE;
   }
@@ -3009,6 +3020,20 @@ on_optionsUseXInput_activate           (GtkMenuItem     *menuitem,
 #endif
   
   update_mappings_menu();
+}
+
+void
+on_hscroll_view_changed                     (GtkAdjustment   *adjustment,
+                                        gpointer         user_data)
+{
+    update_viewIndicator();
+}
+
+void
+on_vscroll_view_changed                     (GtkAdjustment   *adjustment,
+                                        gpointer         user_data)
+{
+    update_viewIndicator();
 }
 
 void
@@ -3571,7 +3596,7 @@ on_viewSetZoom_activate                (GtkMenuItem     *menuitem,
     if (response == GTK_RESPONSE_OK || response == GTK_RESPONSE_APPLY) {
       ui.zoom = DEFAULT_ZOOM*zoom_percent/100;
       gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-      gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoom);
+      gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
       rescale_text_items();
       rescale_bg_pixmaps();
       rescale_images();
