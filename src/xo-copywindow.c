@@ -14,13 +14,13 @@ GtkWidget* create_winView(){
     gtk_window_set_icon(GTK_WINDOW(winView), create_pixbuf("xournal.png"));
     GtkWidget* vbox =gtk_vbox_new(FALSE, 0);
 
+    gtk_window_set_default_size(GTK_WINDOW (winView), 500, 500);
 
     scrolledWindowView=gtk_scrolled_window_new(NULL, NULL);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (scrolledWindowView), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
     viewCanvas = gnome_canvas_new_aa();
 
-    gtk_window_set_default_size(GTK_WINDOW (winView), ui.window_default_width, ui.window_default_height);
     gtk_window_set_title (GTK_WINDOW (winView), _("Xournal viewing window"));
 
     gtk_container_add(GTK_CONTAINER(winView), vbox);
@@ -71,13 +71,8 @@ void create_viewIndicator()
   viewIndicatorItem = gnome_canvas_item_new(gnome_canvas_root(canvas),
       gnome_canvas_rect_get_type(),
       "width-pixels", 5,
-      "outline-color-rgba", 0x00110080,
-      "fill-color-rgba",    0x00800080,
-      "x1", 100.,
-      "x2", 5000.,
-      "y1", 100.,
-      "y2", 3000.,
-
+      "outline-color-rgba", 0x00110040,
+      "fill-color-rgba",    0x00800040,
       NULL);
 
   gnome_canvas_item_show(viewIndicatorItem);
@@ -94,11 +89,6 @@ void update_viewIndicator(){
     
     double xsize=scrolledWindowView->allocation.width / ui.zoomView;
     double ysize=scrolledWindowView->allocation.height / ui.zoomView;
-
-    fprintf(stderr, "x:%f\n", left);
-    fprintf(stderr, "y:%f\n", top);
-    fprintf(stderr, "w:%f\n", xsize);
-    fprintf(stderr, "h:%f\n", ysize);
 
     ui.viewIndicator.bbox.bottom = top+xsize;
     ui.viewIndicator.bbox.right = left+ysize;

@@ -503,6 +503,7 @@ on_editUndo_activate                   (GtkMenuItem     *menuitem,
       undo->bg = tmp_bg;
       undo->page->bg->canvas_item = undo->bg->canvas_item;
       undo->bg->canvas_item = NULL;
+      undo->bg->canvas_item_view = NULL;
     }
     if (undo->type != ITEM_NEW_BG_ONE) {
       tmp_x = undo->page->width;
@@ -533,6 +534,7 @@ on_editUndo_activate                   (GtkMenuItem     *menuitem,
       // also destroys the background and layer's canvas items
     undo->page->group = NULL;
     undo->page->bg->canvas_item = NULL;
+    undo->page->bg->canvas_item_view = NULL;
     journal.pages = g_list_remove(journal.pages, undo->page);
     journal.npages--;
     if (ui.cur_page == undo->page) ui.cur_page = NULL;
@@ -745,6 +747,7 @@ on_editRedo_activate                   (GtkMenuItem     *menuitem,
   else if (redo->type == ITEM_NEW_PAGE) {
     // remap the page
     redo->page->bg->canvas_item = NULL;
+    redo->page->bg->canvas_item_view = NULL;
     redo->page->group = (GnomeCanvasGroup *) gnome_canvas_item_new(
       gnome_canvas_root(canvas), gnome_canvas_clipgroup_get_type(), NULL);
     make_page_clipbox(redo->page);
@@ -761,7 +764,7 @@ on_editRedo_activate                   (GtkMenuItem     *menuitem,
     // unmap all the canvas items
     gtk_object_destroy(GTK_OBJECT(redo->page->group));
     redo->page->group = NULL;
-    redo->page->bg->canvas_item = NULL;
+    redo->page->bg->canvas_item_view = NULL;
     for (list = redo->page->layers; list!=NULL; list = list->next) {
       l = (struct Layer *)list->data;
       for (itemlist = l->items; itemlist!=NULL; itemlist = itemlist->next)
@@ -1193,6 +1196,7 @@ on_journalDeletePage_activate          (GtkMenuItem     *menuitem,
   gtk_object_destroy(GTK_OBJECT(ui.cur_page->group));
   ui.cur_page->group = NULL;
   ui.cur_page->bg->canvas_item = NULL;
+  ui.cur_page->bg->canvas_item_view = NULL;
   for (layerlist = ui.cur_page->layers; layerlist!=NULL; layerlist = layerlist->next) {
     l = (struct Layer *)layerlist->data;
     for (itemlist = l->items; itemlist!=NULL; itemlist = itemlist->next)

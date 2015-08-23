@@ -638,7 +638,12 @@ void make_page_clipbox(struct Page *pg)
   gnome_canvas_item_set(GNOME_CANVAS_ITEM(pg->viewingGroup), "path", pg_clip, NULL);
   gnome_canvas_path_def_unref(pg_clip);
 }
-
+/**
+ * @brief make_canvas_item_one adds a canvasItem to the given item.
+ * @param group the canvasGroup to append the item to
+ * @param viewGroup the canvas group to append the duplicate item to for the viewing window.
+ * @param item the `Item` to be processed
+ */
 void make_canvas_item_one(GnomeCanvasGroup *group, GnomeCanvasGroup* viewGroup, struct Item *item)
 {
   PangoFontDescription *font_desc;
