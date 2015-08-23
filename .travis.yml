@@ -1,4 +1,5 @@
-
 install:
-	- ./autogen.sh
-	- make
+ - ./autogen.sh
+ - make
+
+language: c++
