@@ -8,6 +8,8 @@
 
 GtkWidget* winView;
 
+//borrowing this from selection.c
+extern void make_dashed(GnomeCanvasItem* item);
 
 GtkWidget* create_winView(){
     GtkWidget* winView = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -19,7 +21,7 @@ GtkWidget* create_winView(){
     scrolledWindowView=gtk_scrolled_window_new(NULL, NULL);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (scrolledWindowView), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
-    viewCanvas = gnome_canvas_new_aa();
+    viewCanvas = GNOME_CANVAS(gnome_canvas_new_aa());
 
     gtk_window_set_title (GTK_WINDOW (winView), _("Xournal viewing window"));
 
