@@ -109,7 +109,7 @@ struct Page *new_page(struct Page *template)
     refstring_ref(pg->bg->filename);
   }
   pg->viewingGroup = (GnomeCanvasGroup *) gnome_canvas_item_new(
-      gnome_canvas_root(viewCanvas), gnome_canvas_clipgroup_get_type(), NULL);
+      gnome_canvas_root(ui.copyWindow.canvas), gnome_canvas_clipgroup_get_type(), NULL);
 
   pg->group = (GnomeCanvasGroup *) gnome_canvas_item_new(
       gnome_canvas_root(canvas), gnome_canvas_clipgroup_get_type(), NULL);
@@ -144,7 +144,7 @@ struct Page *new_page_with_bg(struct Background *bg, double width, double height
   pg->width = width;
 
   pg->viewingGroup = (GnomeCanvasGroup *) gnome_canvas_item_new(
-      gnome_canvas_root(viewCanvas), gnome_canvas_clipgroup_get_type(), NULL);
+      gnome_canvas_root(ui.copyWindow.canvas), gnome_canvas_clipgroup_get_type(), NULL);
 
   pg->group = (GnomeCanvasGroup *) gnome_canvas_item_new(
       gnome_canvas_root(canvas), gnome_canvas_clipgroup_get_type(), NULL);
@@ -666,7 +666,7 @@ void make_canvas_item_one(GnomeCanvasGroup *group, GnomeCanvasGroup* viewGroup, 
             "fill-color-rgba", item->brush.color_rgba,  
             "width-units", item->brush.thickness, NULL);
     }
-    else {
+    else { //variable width
       item->canvas_item_view = gnome_canvas_item_new(viewGroup,
             gnome_canvas_group_get_type(), NULL);
       item->canvas_item = gnome_canvas_item_new(group,
@@ -1556,18 +1556,18 @@ void do_switch_page(int pg, gboolean rescroll, gboolean refresh_all)
     else
       cy = ui.cur_page->voffset*ui.zoom;
     gnome_canvas_scroll_to(canvas, cx, cy);
-    gnome_canvas_scroll_to(viewCanvas, cx, cy);
+    gnome_canvas_scroll_to(ui.copyWindow.canvas, cx, cy);
 
     if (refresh_all) {
       gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-      gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
+      gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
     }
     else if (!ui.view_continuous){
       gnome_canvas_item_move(GNOME_CANVAS_ITEM(ui.cur_page->viewingGroup), 0., 0.);
       gnome_canvas_item_move(GNOME_CANVAS_ITEM(ui.cur_page->group), 0., 0.);
     }
   }
-  copyScrollPosition();
+  update_copy_scroll();
 }
 
 void update_page_stuff(void)
@@ -1606,7 +1606,7 @@ void update_page_stuff(void)
     }
     vertpos -= VIEW_CONTINUOUS_SKIP;
     gnome_canvas_set_scroll_region(canvas, 0, 0, maxwidth, vertpos);
-    gnome_canvas_set_scroll_region(viewCanvas, 0, 0, maxwidth, vertpos);
+    gnome_canvas_set_scroll_region(ui.copyWindow.canvas, 0, 0, maxwidth, vertpos);
   }
   else if (ui.view_continuous == VIEW_MODE_HORIZONTAL) {
     horizpos = 0.; 
@@ -1628,7 +1628,7 @@ void update_page_stuff(void)
     }
     horizpos -= VIEW_CONTINUOUS_SKIP;
     gnome_canvas_set_scroll_region(canvas, 0, 0, horizpos, maxheight);
-    gnome_canvas_set_scroll_region(viewCanvas, 0, 0, horizpos, maxheight);
+    gnome_canvas_set_scroll_region(ui.copyWindow.canvas, 0, 0, horizpos, maxheight);
   }
   else { // VIEW_MODE_ONE_PAGE
     for (pglist = journal.pages; pglist!=NULL; pglist = pglist->next) {
@@ -1648,8 +1648,7 @@ void update_page_stuff(void)
       }
     }
     gnome_canvas_set_scroll_region(canvas, 0, 0, ui.cur_page->width, ui.cur_page->height);
-    gnome_canvas_set_scroll_region(viewCanvas, 0, 0, ui.cur_page->width, ui.cur_page->height);
-
+    gnome_canvas_set_scroll_region(ui.copyWindow.canvas, 0, 0, ui.cur_page->width, ui.cur_page->height);
   }
 
   // update the page / layer info at bottom of screen
@@ -1769,7 +1768,7 @@ void update_page_stuff(void)
 
   gtk_widget_set_sensitive(GET_COMPONENT("editPaste"), ui.cur_layer!=NULL);
   gtk_widget_set_sensitive(GET_COMPONENT("buttonPaste"), ui.cur_layer!=NULL);
-  copyScrollPosition();
+  update_copy_scroll();
 }
 
 void update_toolbar_and_menu(void)

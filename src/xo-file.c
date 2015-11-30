@@ -1093,7 +1093,7 @@ gboolean open_journal(char *filename)
     ui.zoom = ui.startup_zoom;
     ui.zoomView = ui.zoom;
     gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-    gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
+    gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
     update_page_stuff();
     return init_bgpdf(filename, TRUE, DOMAIN_ABSOLUTE);
   }
@@ -1154,7 +1154,7 @@ gboolean open_journal(char *filename)
   ui.zoomView = ui.zoom;
   update_file_name(g_strdup(filename));
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
+  gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
   make_canvas_items();
   update_page_stuff();
   rescale_bg_pixmaps(); // this requests the PDF pages if need be

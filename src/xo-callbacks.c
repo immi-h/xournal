@@ -50,7 +50,7 @@ on_fileNew_activate                    (GtkMenuItem     *menuitem,
     ui.zoomView=ui.zoom;
     update_page_stuff();
     gtk_adjustment_set_value(gtk_layout_get_vadjustment(GTK_LAYOUT(canvas)), 0);
-    gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
+    gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
     gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
   }
 }
@@ -114,7 +114,7 @@ on_fileNewBackground_activate          (GtkMenuItem     *menuitem,
   ui.zoom = ui.startup_zoom;
   ui.zoomView = ui.startup_zoom;
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
+  gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
   update_page_stuff();
   success = init_bgpdf(filename, TRUE, file_domain);
   set_cursor_busy(FALSE);
@@ -941,8 +941,8 @@ void do_view_modeswitch(int view_mode)
   if (ui.view_continuous == view_mode) return;
   ui.view_continuous = view_mode;
 
-  GtkAdjustment* v_adj_view = gtk_layout_get_vadjustment(GTK_LAYOUT(viewCanvas));
-  GtkAdjustment* h_adj_view = gtk_layout_get_hadjustment(GTK_LAYOUT(viewCanvas));
+  GtkAdjustment* v_adj_view = gtk_layout_get_vadjustment(GTK_LAYOUT(ui.copyWindow.canvas));
+  GtkAdjustment* h_adj_view = gtk_layout_get_hadjustment(GTK_LAYOUT(ui.copyWindow.canvas));
 
   v_adj = gtk_layout_get_vadjustment(GTK_LAYOUT(canvas));
   h_adj = gtk_layout_get_hadjustment(GTK_LAYOUT(canvas));
@@ -959,7 +959,7 @@ void do_view_modeswitch(int view_mode)
 
   // force a refresh
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
+  gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
 }
 
 void
@@ -994,12 +994,12 @@ on_viewZoomIn_activate                 (GtkMenuItem     *menuitem,
   if (ui.zoom > MAX_ZOOM) return;
   ui.zoom *= ui.zoom_step_factor;
   ui.zoomView = ui.zoom;
-  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
+  gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
   rescale_text_items();
   rescale_bg_pixmaps();
   rescale_images();
-  copyScrollPosition();
+  update_copy_scroll();
 }
 
 
@@ -1011,11 +1011,11 @@ on_viewZoomOut_activate                (GtkMenuItem     *menuitem,
   ui.zoom /= ui.zoom_step_factor;
   ui.zoomView = ui.zoom;
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
+  gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
   rescale_text_items();
   rescale_bg_pixmaps();
   rescale_images();
-  copyScrollPosition();
+  update_copy_scroll();
 }
 
 
@@ -1025,7 +1025,7 @@ on_viewNormalSize_activate             (GtkMenuItem     *menuitem,
 {
   ui.zoom = DEFAULT_ZOOM;
   ui.zoomView = DEFAULT_ZOOM;
-  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
+  gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
   rescale_text_items();
   rescale_bg_pixmaps();
   rescale_images();
@@ -1039,7 +1039,7 @@ on_viewPageWidth_activate              (GtkMenuItem     *menuitem,
 {
   ui.zoom = (GTK_WIDGET(canvas))->allocation.width/ui.cur_page->width;
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-  gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
+  gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
   rescale_text_items();
   rescale_bg_pixmaps();
   rescale_images();
@@ -1601,7 +1601,7 @@ on_journalLoadBackground_activate      (GtkMenuItem     *menuitem,
   if (ui.zoom != DEFAULT_ZOOM) {
     ui.zoom = DEFAULT_ZOOM;
     gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-    gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
+    gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
     rescale_text_items();
     rescale_bg_pixmaps();
     rescale_images();
@@ -1649,7 +1649,7 @@ on_journalScreenshot_activate          (GtkMenuItem     *menuitem,
   if (ui.zoom != DEFAULT_ZOOM) {
     ui.zoom = DEFAULT_ZOOM;
     gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-    gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
+    gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
     rescale_text_items();
     rescale_bg_pixmaps();
     rescale_images();
@@ -2808,6 +2808,9 @@ on_canvas_motion_notify_event          (GtkWidget       *widget,
   double pt[2];
   GdkModifierType mask;
 
+  //for the copy window
+  update_cursor_indicator(event);
+
   // if pen is sending motion events then it's in proximity
   if (event->device->source == GDK_SOURCE_PEN) ui.in_proximity = TRUE;
   
@@ -3046,7 +3049,7 @@ on_vscroll_changed                     (GtkAdjustment   *adjustment,
   
 
 
-  copyScrollPosition();
+  update_copy_scroll();
 
   if (ui.view_continuous!=VIEW_MODE_CONTINUOUS) return;
   
@@ -3596,7 +3599,7 @@ on_viewSetZoom_activate                (GtkMenuItem     *menuitem,
     if (response == GTK_RESPONSE_OK || response == GTK_RESPONSE_APPLY) {
       ui.zoom = DEFAULT_ZOOM*zoom_percent/100;
       gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
-      gnome_canvas_set_pixels_per_unit(viewCanvas, ui.zoomView);
+      gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
       rescale_text_items();
       rescale_bg_pixmaps();
       rescale_images();

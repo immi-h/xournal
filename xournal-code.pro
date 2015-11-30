@@ -55,7 +55,8 @@ HEADERS += \
     src/xo-shapes.h \
     src/xo-support.h \
     src/xournal.h \
-    src/xo-copywindow.h
+    src/xo-copywindow.h \
+    src/utils.h
 
 DISTFILES += \
     xournal.glade \

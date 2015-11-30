@@ -30,7 +30,6 @@ extern struct UIData ui;
 #define GLADE_HOOKUP_OBJECT_NO_REF(component,widget,name) \
   g_object_set_data (G_OBJECT (component), name, widget)
 
-GnomeCanvas* viewCanvas;
 GtkWidget *scrolledWindowView;
 GtkWidget*
 create_winMain (void)

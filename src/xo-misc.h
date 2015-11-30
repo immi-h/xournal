@@ -142,7 +142,7 @@ wrapper_poppler_page_render_to_pixbuf (PopplerPage *page,
  * @brief copyScrollPosition copies the scroll position from the main window to the viewing window
  *
  */
-void copyScrollPosition();
+void updateCopyScroll();
 
 // defines for paper rulings
 

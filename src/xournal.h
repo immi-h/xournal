@@ -17,6 +17,9 @@
 #include <libgnomecanvas/libgnomecanvas.h>
 #include <poppler/glib/poppler.h>
 
+#include "utils.h"
+#include "xo-copywindow.h"
+
 // #define INPUT_DEBUG
 /* uncomment this line if you experience event-processing problems
    and want to list the input events received by xournal. Caution, lots
@@ -158,9 +161,6 @@ extern guint predef_bgcolors_rgba[COLOR_MAX];
 
 extern double predef_thickness[NUM_STROKE_TOOLS][THICKNESS_MAX];
 
-typedef struct BBox {
-  double left, right, top, bottom;
-} BBox;
 
 struct UndoErasureData;
 
@@ -252,11 +252,7 @@ typedef struct Selection {
   float move_pagedelta;
 } Selection;
 
-typedef struct ViewIndicator{
-    BBox bbox;
-    GnomeCanvasItem* canvas_item;
-
-} ViewIndicator;
+#include "xo-copywindow.h"
 
 typedef struct UIData {
   int pageno, layerno; // the current page and layer
@@ -351,7 +347,9 @@ typedef struct UIData {
 #endif
   gboolean poppler_force_cairo; // force poppler to use cairo
   gboolean warned_generate_fontconfig; // for win32 fontconfig cache
-  struct ViewIndicator viewIndicator;
+
+  struct CopyWindow copyWindow;
+
 } UIData;
 
 #define BRUSH_LINKED 0
@@ -436,7 +434,6 @@ typedef struct BgPdf {
 extern GtkWidget *winMain;
 extern GtkWidget *winView;
 extern GnomeCanvas *canvas;
-extern GnomeCanvas *viewCanvas;
 extern GtkWidget *scrolledWindowView;
 
 
