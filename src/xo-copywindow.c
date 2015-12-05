@@ -174,22 +174,38 @@ void create_cursorIndicator()
                 NULL
             );
     GnomeCanvasPoints* points;
-    double coords[] =  {-10.,-10., 10., 10.};
+    double coords[] =  {-5.,-5., 5., 5.};
 
     points = gnome_canvas_points_new(2);
     g_memmove(points->coords, coords,
               2*2*sizeof(double));
 
-    GnomeCanvasLine* line =
-            gnome_canvas_item_new(
-                group,
-                gnome_canvas_line_get_type(),
+    gnome_canvas_item_new(
+        group,
+        gnome_canvas_line_get_type(),
 
-                "points",			points,
-                "fill-color-rgba",	0x00ff00ff,
-                "width-units",		3.,
-                NULL
-            );
+        "points",			points,
+        "fill-color-rgba",	0x000000ff,
+        "width-units",		1.,
+        NULL
+    );
+
+    coords[0] =  5;
+    coords[2] = -5;
+    g_memmove(points->coords, coords,
+              2*2*sizeof(double));
+
+    gnome_canvas_item_new(
+        group,
+        gnome_canvas_line_get_type(),
+
+        "points",			points,
+        "fill-color-rgba",	0x000000ff,
+        "width-units",		1.,
+        NULL
+    );
+
+
 
     ui.copyWindow.cursorIndicator = group;
 }
