@@ -5,9 +5,21 @@
 #include "xournal.h"
 #include "xo-support.h"
 #include "xo-misc.h"
+#include "xo-support.h"
 
 
 GtkWidget* winView;
+
+
+struct {
+    GtkToolButton* cursorVisible;
+    GtkToolButton* windowVisible;
+} menuItems;
+
+
+
+///  CALLBACKS
+void on_tooltoggle_toggled (GtkMenuItem *menuitem, gpointer user_data);
 
 //borrowing this from selection.c
 extern void make_dashed(GnomeCanvasItem* item);
@@ -47,27 +59,50 @@ GtkWidget* create_winView(){
     return winView;
 }
 
+GtkWidget* create_copy_toolbar(){
+    GtkToolbar* toolbar = gtk_toolbar_new();
+
+    GtkWidget* image;
+
+    gtk_widget_show(toolbar);
+    gtk_toolbar_set_style (GTK_TOOLBAR (toolbar), GTK_TOOLBAR_ICONS);
+
+    menuItems.windowVisible = gtk_toggle_tool_button_new_from_stock("gtk-copy");
+    menuItems.cursorVisible = gtk_toggle_tool_button_new();
+
+    gtk_widget_show(menuItems.windowVisible);
+    gtk_widget_show(menuItems.cursorVisible);
+
+    image = create_pixmap(0, "pencilIndicator.png");
+    gtk_tool_button_set_icon_widget(menuItems.cursorVisible, image);
+
+    gtk_signal_connect(menuItems.windowVisible, "toggled", G_CALLBACK(&on_tooltoggle_toggled),NULL);
+    gtk_signal_connect(menuItems.cursorVisible, "toggled", G_CALLBACK(&on_tooltoggle_toggled),NULL);
+
+
+    gtk_container_add(GTK_CONTAINER(toolbar), menuItems.windowVisible);
+    gtk_container_add(GTK_CONTAINER(toolbar), menuItems.cursorVisible);
+
+    return toolbar;
+}
+
+
 
 void update_copy_scroll()
 {
-  fprintf(stderr, "DEBUG: copy scroll\n");
   GtkAdjustment* mainAdj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(GET_COMPONENT("scrolledwindowMain")));
   GtkAdjustment* viewAdj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scrolledWindowView));
 
-  float pageSize = (gtk_adjustment_get_page_size(mainAdj)/2);
+  float pageSize     = (gtk_adjustment_get_page_size(mainAdj)/2);
   float pageSizeView = (gtk_adjustment_get_page_size(mainAdj)/2);
 
   double value = gtk_adjustment_get_value(mainAdj) + (gtk_adjustment_get_page_size(mainAdj)/2);
 
-  fprintf(stderr, "pageSize: %f\n", pageSize);
-  fprintf(stderr, "pageSizeView: %f\n", pageSizeView);
-  fprintf(stderr, "value: %f\n", value);
-  
+
   switch(ui.copyWindow.scrollMode){
     default:
   	case Detached:
-      //TODO
-      break;
+      break; //don't copy anything
   	case TopLeft:
       //TODO
       break;
@@ -86,11 +121,9 @@ void update_copy_scroll()
   }
 
   gtk_adjustment_set_value(viewAdj, value - (gtk_adjustment_get_page_size(viewAdj)/2));
-  
+
   update_viewIndicator();
 }
-
-
 
 void create_viewIndicator()
 {
@@ -108,6 +141,9 @@ void create_viewIndicator()
 
 void update_viewIndicator(){
     if(!scrolledWindowView) return;
+    if(!ui.copyWindow.viewIndicator.item){
+        create_viewIndicator();
+    }
     GtkAdjustment* vAdj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scrolledWindowView));
     GtkAdjustment* hAdj = gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(scrolledWindowView));
 
@@ -133,18 +169,6 @@ void update_viewIndicator(){
     gnome_canvas_item_raise_to_top(ui.copyWindow.viewIndicator.item);
 }
 
-void on_copyWindow_visibility_toggled (GtkMenuItem *menuitem, gpointer user_data);
-
-GtkWidget* makeCopywindowToolbar(){
-    GtkToolbar* toolbar = gtk_toolbar_new();
-    GtkToolButton* copyWindowVisibleButton = gtk_toggle_button_new();
-    gtk_signal_connect(copyWindowVisibleButton, "activate", G_CALLBACK(on_copyWindow_visibility_toggled),NULL);
-
-    GtkToolButton* copyWindowPointerVisible = gtk_toggle_button_new();
-    gtk_container_add(GTK_CONTAINER(toolbar), copyWindowVisibleButton);
-}
-
-
 
 
 
@@ -156,11 +180,42 @@ GtkWidget* makeCopywindowToolbar(){
 /// \param menuitem  the vilibilty toggle switch
 /// \param user_data nothing usefull
 ///
-void on_copyWindow_visibility_toggled (GtkMenuItem *menuitem, gpointer user_data){
+void on_tooltoggle_toggled (GtkMenuItem *item, gpointer user_data){
     //todo
     printf("[copywindow]visibility toggled");
+    gboolean active = gtk_toggle_tool_button_get_active(item);
+    if(item == menuItems.windowVisible ){
+        set_copy_window_visible(active);
+    }
+    else if(item == menuItems.cursorVisible){
+        set_copy_cursor_visible(active);
+    }
 }
 
+void set_copy_window_visible(gboolean visible){
+    ui.copyWindow.visible = visible;
+    if(visible == FALSE){
+        gtk_widget_set_visible(winView, visible);
+    }
+    else
+    {
+        //restore will set the actual visibility
+        copy_window_restore();
+    }
+}
+
+void set_copy_cursor_visible(gboolean visible){
+    ui.copyWindow.cursorVisible = visible;
+    (visible? gnome_canvas_item_show : gnome_canvas_item_hide)
+            (ui.copyWindow.cursorIndicator);
+
+}
+
+void copy_window_restore(){
+    gtk_widget_set_visible(winView, ui.copyWindow.visible);
+
+    set_copy_cursor_visible(ui.copyWindow.cursorIndicator);
+}
 
 void create_cursorIndicator()
 {
@@ -205,8 +260,6 @@ void create_cursorIndicator()
         NULL
     );
 
-
-
     ui.copyWindow.cursorIndicator = group;
 }
 
@@ -214,7 +267,6 @@ void update_cursor_indicator(GdkEventMotion* event){
 
     double newPos[2];
     get_pointer_coords(event, newPos);
-    fprintf(stderr, "x: %f\ny:%f\n", newPos[0], newPos[1] );
     if(ui.copyWindow.cursorIndicator==NULL){
         create_cursorIndicator();
     }
@@ -224,3 +276,4 @@ void update_cursor_indicator(GdkEventMotion* event){
                           NULL);
     gnome_canvas_item_move(ui.copyWindow.cursorIndicator, 0., 0.);
 }
+

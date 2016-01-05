@@ -21,6 +21,8 @@
 #include "xo-interface.h"
 #include "xo-support.h"
 
+#include "xo-copywindow.h"
+
 extern struct UIData ui;
 
 #define GLADE_HOOKUP_OBJECT(component,widget,name) \
@@ -273,6 +275,7 @@ create_winMain (void)
   GtkWidget *helpIndex;
   GtkWidget *helpAbout;
   GtkWidget *toolbarMain;
+  GtkWidget* toolbarCopy;
   GtkIconSize tmp_toolbar_icon_size;
   GtkWidget *saveButton;
   GtkWidget *newButton;
@@ -376,6 +379,8 @@ create_winMain (void)
   menubar = gtk_menu_bar_new ();
   gtk_widget_show (menubar);
   gtk_box_pack_start (GTK_BOX (vboxMain), menubar, FALSE, FALSE, 0);
+
+
 
   menuFile = gtk_menu_item_new_with_mnemonic (_("_File"));
   gtk_widget_show (menuFile);
@@ -1489,7 +1494,10 @@ create_winMain (void)
   gtk_container_add (GTK_CONTAINER (menuHelp_menu), helpAbout);
 
   toolbarMain = gtk_toolbar_new ();
+  toolbarCopy = create_copy_toolbar();
+
   gtk_widget_show (toolbarMain);
+  gtk_box_pack_start (GTK_BOX (vboxMain), toolbarCopy, FALSE, FALSE, 0);
   gtk_box_pack_start (GTK_BOX (vboxMain), toolbarMain, FALSE, FALSE, 0);
   gtk_toolbar_set_style (GTK_TOOLBAR (toolbarMain), GTK_TOOLBAR_ICONS);
   tmp_toolbar_icon_size = gtk_toolbar_get_icon_size (GTK_TOOLBAR (toolbarMain));
