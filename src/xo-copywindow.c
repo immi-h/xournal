@@ -14,6 +14,7 @@ GtkWidget* winView;
 struct {
     GtkToolButton* cursorVisible;
     GtkToolButton* windowVisible;
+    GtkComboBox  * scrollMode;
 } menuItems;
 
 
@@ -60,32 +61,41 @@ GtkWidget* create_winView(){
 }
 
 GtkWidget* create_copy_toolbar(){
-    GtkToolbar* toolbar = gtk_toolbar_new();
+    GtkHBox* toolbar = gtk_hbox_new(FALSE, 3);
 
     GtkWidget* image;
 
     gtk_widget_show(toolbar);
     gtk_toolbar_set_style (GTK_TOOLBAR (toolbar), GTK_TOOLBAR_ICONS);
+    
+    
 
     menuItems.windowVisible = gtk_toggle_tool_button_new_from_stock("gtk-copy");
-    menuItems.cursorVisible = gtk_toggle_tool_button_new();
-
-    gtk_widget_show(menuItems.windowVisible);
-    gtk_widget_show(menuItems.cursorVisible);
+    menuItems.cursorVisible = gtk_toggle_button_new();
+    menuItems.scrollMode    = gtk_combo_box_new_text();
 
     image = create_pixmap(0, "pencilIndicator.png");
-    gtk_tool_button_set_icon_widget(menuItems.cursorVisible, image);
+    gtk_button_set_image (menuItems.cursorVisible, image);
 
     gtk_signal_connect(menuItems.windowVisible, "toggled", G_CALLBACK(&on_tooltoggle_toggled),NULL);
     gtk_signal_connect(menuItems.cursorVisible, "toggled", G_CALLBACK(&on_tooltoggle_toggled),NULL);
 
 
-    gtk_container_add(GTK_CONTAINER(toolbar), menuItems.windowVisible);
+
+    gtk_combo_box_append_text(menuItems.scrollMode, "Detached");
+    gtk_combo_box_append_text(menuItems.scrollMode, "Top left corner");
+    gtk_combo_box_append_text(menuItems.scrollMode, "Center");
+
+    gtk_widget_show(menuItems.windowVisible);
+    gtk_widget_show(menuItems.cursorVisible);
+    gtk_widget_show(menuItems.scrollMode);
+
     gtk_container_add(GTK_CONTAINER(toolbar), menuItems.cursorVisible);
+    gtk_container_add(GTK_CONTAINER(toolbar), menuItems.windowVisible);
+    gtk_container_add(GTK_CONTAINER(toolbar), menuItems.scrollMode);
 
     return toolbar;
 }
-
 
 
 void update_copy_scroll()
