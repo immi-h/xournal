@@ -1,11 +1,14 @@
 #include "xo-copywindow.h"
 
-#include <stdio.h>
-#include <gtk/gtk.h>
 #include "xournal.h"
 #include "xo-support.h"
 #include "xo-misc.h"
 #include "xo-support.h"
+
+#include <stdio.h>
+#include <gtk/gtk.h>
+#include <string.h>
+
 
 
 GtkWidget* winView;
@@ -21,6 +24,7 @@ struct {
 
 ///  CALLBACKS
 void on_tooltoggle_toggled (GtkMenuItem *menuitem, gpointer user_data);
+void on_scroll_combo_changed (GtkComboBox *combobox, gpointer user_data);
 
 //borrowing this from selection.c
 extern void make_dashed(GnomeCanvasItem* item);
@@ -79,12 +83,17 @@ GtkWidget* create_copy_toolbar(){
 
     gtk_signal_connect(menuItems.windowVisible, "toggled", G_CALLBACK(&on_tooltoggle_toggled),NULL);
     gtk_signal_connect(menuItems.cursorVisible, "toggled", G_CALLBACK(&on_tooltoggle_toggled),NULL);
+    gtk_signal_connect(menuItems.scrollMode   , "changed", G_CALLBACK(&on_scroll_combo_changed),NULL);
 
 
 
     gtk_combo_box_append_text(menuItems.scrollMode, "Detached");
+    gtk_combo_box_append_text(menuItems.scrollMode, "Scroll together");
     gtk_combo_box_append_text(menuItems.scrollMode, "Top left corner");
     gtk_combo_box_append_text(menuItems.scrollMode, "Center");
+    gtk_combo_box_append_text(menuItems.scrollMode, "Same height");
+    gtk_combo_box_append_text(menuItems.scrollMode, "same width");
+    gtk_combo_box_append_text(menuItems.scrollMode, "Always fit");
 
     gtk_widget_show(menuItems.windowVisible);
     gtk_widget_show(menuItems.cursorVisible);
@@ -100,24 +109,39 @@ GtkWidget* create_copy_toolbar(){
 
 void update_copy_scroll()
 {
-  GtkAdjustment* mainAdj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(GET_COMPONENT("scrolledwindowMain")));
-  GtkAdjustment* viewAdj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scrolledWindowView));
+  GtkAdjustment* mainAdjV = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(GET_COMPONENT("scrolledwindowMain")));
+  GtkAdjustment* mainAdjH = gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(GET_COMPONENT("scrolledwindowMain")));
 
-  float pageSize     = (gtk_adjustment_get_page_size(mainAdj)/2);
-  float pageSizeView = (gtk_adjustment_get_page_size(mainAdj)/2);
+  GtkAdjustment* viewAdjV = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scrolledWindowView));
+  GtkAdjustment* viewAdjH = gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(scrolledWindowView));
 
-  double value = gtk_adjustment_get_value(mainAdj) + (gtk_adjustment_get_page_size(mainAdj)/2);
+  float pageSizeV    = (gtk_adjustment_get_page_size(mainAdjV)/2);
+  float pageSizeH    = (gtk_adjustment_get_page_size(mainAdjH)/2);
+
+  float pageSizeViewV= (gtk_adjustment_get_page_size(viewAdjV)/2);
+  float pageSizeViewH= (gtk_adjustment_get_page_size(viewAdjH)/2);
+
+
+
+  struct {
+      float x,y;
+  } main;
+  main.x = gtk_adjustment_get_value(mainAdjH);
+  main.y = gtk_adjustment_get_value(mainAdjV);
+
 
 
   switch(ui.copyWindow.scrollMode){
     default:
   	case Detached:
       break; //don't copy anything
-  	case TopLeft:
-      //TODO
-      break;
     case Center:
-      //TODO
+      main.y += pageSizeV - pageSizeViewV;
+      main.x += pageSizeH - pageSizeViewH;
+    case TopLeft:
+      fprintf(stderr, "updating in TOPLEFT mode to (%f,%f)\n", main.x, main.y);
+      gtk_adjustment_set_value(viewAdjV, main.y);
+      gtk_adjustment_set_value(viewAdjH, main.x);
       break;
   case SameHeight:
       //TODO
@@ -130,7 +154,6 @@ void update_copy_scroll()
       break;
   }
 
-  gtk_adjustment_set_value(viewAdj, value - (gtk_adjustment_get_page_size(viewAdj)/2));
 
   update_viewIndicator();
 }
@@ -180,52 +203,6 @@ void update_viewIndicator(){
 }
 
 
-
-
-///////////////////////////////////
-///  CALLBACKS
-
-///////////////////////////////////
-/// \brief on_copyWindow_visibility_toggled callback for when th visibility button is clicked
-/// \param menuitem  the vilibilty toggle switch
-/// \param user_data nothing usefull
-///
-void on_tooltoggle_toggled (GtkMenuItem *item, gpointer user_data){
-    //todo
-    printf("[copywindow]visibility toggled");
-    gboolean active = gtk_toggle_tool_button_get_active(item);
-    if(item == menuItems.windowVisible ){
-        set_copy_window_visible(active);
-    }
-    else if(item == menuItems.cursorVisible){
-        set_copy_cursor_visible(active);
-    }
-}
-
-void set_copy_window_visible(gboolean visible){
-    ui.copyWindow.visible = visible;
-    if(visible == FALSE){
-        gtk_widget_set_visible(winView, visible);
-    }
-    else
-    {
-        //restore will set the actual visibility
-        copy_window_restore();
-    }
-}
-
-void set_copy_cursor_visible(gboolean visible){
-    ui.copyWindow.cursorVisible = visible;
-    (visible? gnome_canvas_item_show : gnome_canvas_item_hide)
-            (ui.copyWindow.cursorIndicator);
-
-}
-
-void copy_window_restore(){
-    gtk_widget_set_visible(winView, ui.copyWindow.visible);
-
-    set_copy_cursor_visible(ui.copyWindow.cursorIndicator);
-}
 
 void create_cursorIndicator()
 {
@@ -287,3 +264,90 @@ void update_cursor_indicator(GdkEventMotion* event){
     gnome_canvas_item_move(ui.copyWindow.cursorIndicator, 0., 0.);
 }
 
+
+
+///////////////////////////////////
+///  CALLBACKS
+
+///////////////////////////////////
+/// \brief on_copyWindow_visibility_toggled callback for when th visibility button is clicked
+/// \param menuitem  the vilibilty toggle switch
+/// \param user_data nothing usefull
+///
+
+void on_scroll_combo_changed (GtkComboBox *combobox, gpointer user_data){
+    const char* newText = gtk_combo_box_get_active_text(combobox);
+
+    if(!strcmp(newText, "Detached")){
+        fprintf(stderr, "switched to mode DETACHED\n");
+        ui.copyWindow.scrollMode = Detached;
+    }
+    else
+    if(!strcmp(newText, "Scroll together")){
+        fprintf(stderr, "switched to mode Together\n");
+        ui.copyWindow.scrollMode = Togheter;
+    }
+    else
+    if(!strcmp(newText, "Top left corner")){
+        fprintf(stderr, "switched to mode TopLeft\n");
+        ui.copyWindow.scrollMode = TopLeft;
+    }
+    else
+    if(!strcmp(newText, "Center")){
+        fprintf(stderr, "switched to mode Center\n");
+        ui.copyWindow.scrollMode = Center;
+    }
+    else
+    if(!strcmp(newText, "Same height")){
+        fprintf(stderr, "switched to mode SAMEHEIGHT\n");
+        ui.copyWindow.scrollMode = SameHeight;
+    }
+    else
+    if(!strcmp(newText, "Same Width")){
+        fprintf(stderr, "switched to mode SameWidth\n");
+        ui.copyWindow.scrollMode = SameWidth;
+    }
+    else
+    if(!strcmp(newText, "Always fit")){
+        fprintf(stderr, "switched to mode alwaysFit\n");
+        ui.copyWindow.scrollMode = AlwaysFit;
+    }
+    update_copy_scroll();
+}
+
+void on_tooltoggle_toggled (GtkMenuItem *item, gpointer user_data){
+    //todo
+    printf("[copywindow]visibility toggled");
+    gboolean active = gtk_toggle_tool_button_get_active(item);
+    if(item == menuItems.windowVisible ){
+        set_copy_window_visible(active);
+    }
+    else if(item == menuItems.cursorVisible){
+        set_copy_cursor_visible(active);
+    }
+}
+
+void set_copy_window_visible(gboolean visible){
+    ui.copyWindow.visible = visible;
+    if(visible == FALSE){
+        gtk_widget_set_visible(winView, visible);
+    }
+    else
+    {
+        //restore will set the actual visibility
+        copy_window_restore();
+    }
+}
+
+void set_copy_cursor_visible(gboolean visible){
+    ui.copyWindow.cursorVisible = visible;
+    (visible? gnome_canvas_item_show : gnome_canvas_item_hide)
+            (ui.copyWindow.cursorIndicator);
+
+}
+
+void copy_window_restore(){
+    gtk_widget_set_visible(winView, ui.copyWindow.visible);
+
+    set_copy_cursor_visible(ui.copyWindow.cursorIndicator);
+}

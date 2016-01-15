@@ -9,6 +9,7 @@
  */
 typedef enum {
     Detached=0,
+    Togheter,
     TopLeft,
     Center,
     SameHeight, //copy the entire width of the main window
