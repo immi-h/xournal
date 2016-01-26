@@ -1587,6 +1587,7 @@ on_journalLoadBackground_activate      (GtkMenuItem     *menuitem,
       undo->bg = pg->bg;
       bg->canvas_item = undo->bg->canvas_item;
       undo->bg->canvas_item = NULL;
+      undo->bg->canvas_item_view = NULL;
       undo->val_x = pg->width;
       undo->val_y = pg->height;
       pg->bg = bg;

@@ -18,6 +18,9 @@ struct {
     GtkToolButton* cursorVisible;
     GtkToolButton* windowVisible;
     GtkComboBox  * scrollMode;
+    GtkToolButton* zoomIn;
+    GtkToolButton* zoomOut;
+
 } menuItems;
 
 

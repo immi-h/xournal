@@ -150,6 +150,7 @@ struct Page *new_page_with_bg(struct Background *bg, double width, double height
       gnome_canvas_root(canvas), gnome_canvas_clipgroup_get_type(), NULL);
   make_page_clipbox(pg);
   update_canvas_bg(pg);
+
   l->viewGroup = (GnomeCanvasGroup *) gnome_canvas_item_new(
       pg->viewingGroup, gnome_canvas_group_get_type(), NULL);
 
@@ -874,8 +875,8 @@ void update_canvas_bg(struct Page *pg)
     group = GNOME_CANVAS_GROUP(pg->bg->canvas_item);
     groupView = GNOME_CANVAS_GROUP(pg->bg->canvas_item_view);
 
-    lower_canvas_item_to(pg->viewingGroup, pg->bg->canvas_item, NULL);
-    lower_canvas_item_to(pg->group, pg->bg->canvas_item, NULL);
+    lower_canvas_item_to(pg->viewingGroup, pg->bg->canvas_item_view, NULL);
+    lower_canvas_item_to(pg->group       , pg->bg->canvas_item     , NULL);
 
     gnome_canvas_item_new(groupView, gnome_canvas_rect_get_type(),
       "x1", 0., "x2", pg->width, "y1", 0., "y2", pg->height,
@@ -884,19 +885,26 @@ void update_canvas_bg(struct Page *pg)
     gnome_canvas_item_new(group, gnome_canvas_rect_get_type(),
       "x1", 0., "x2", pg->width, "y1", 0., "y2", pg->height,
       "fill-color-rgba", pg->bg->color_rgba, NULL);
-
   }
 
   if (pg->bg->type == BG_PIXMAP)
   {
     pg->bg->pixbuf_scale = 0;
-    pg->bg->canvas_item = gnome_canvas_item_new(pg->group, 
+    pg->bg->canvas_item_view = gnome_canvas_item_new(pg->viewingGroup,
+        gnome_canvas_pixbuf_get_type(),
+        "pixbuf", pg->bg->pixbuf,
+        "width", pg->width, "height", pg->height,
+        "width-set", TRUE, "height-set", TRUE,
+        NULL);
+
+    pg->bg->canvas_item = gnome_canvas_item_new(pg->group,
         gnome_canvas_pixbuf_get_type(), 
         "pixbuf", pg->bg->pixbuf,
         "width", pg->width, "height", pg->height, 
         "width-set", TRUE, "height-set", TRUE, 
         NULL);
-    lower_canvas_item_to(pg->group, pg->bg->canvas_item, NULL);
+    lower_canvas_item_to(pg->group,        pg->bg->canvas_item,      NULL);
+    lower_canvas_item_to(pg->viewingGroup, pg->bg->canvas_item_view, NULL);
   }
 
   if (pg->bg->type == BG_PDF)
@@ -910,26 +918,42 @@ void update_canvas_bg(struct Page *pg)
     group = GNOME_CANVAS_GROUP(pg->bg->canvas_item);
     groupView = GNOME_CANVAS_GROUP(pg->bg->canvas_item_view);
 
-    lower_canvas_item_to(pg->viewingGroup, pg->bg->canvas_item, NULL);
+    lower_canvas_item_to(pg->viewingGroup, pg->bg->canvas_item_view, NULL);
     lower_canvas_item_to(pg->group, pg->bg->canvas_item, NULL);
 
     if (pg->bg->pixbuf == NULL) return;
     is_well_scaled = (fabs(pg->bg->pixel_width - pg->width*ui.zoom) < 2.
                    && fabs(pg->bg->pixel_height - pg->height*ui.zoom) < 2.);
     if (is_well_scaled)
+    {
       gnome_canvas_item_new(group,
+          gnome_canvas_pixbuf_get_type(),
+          "pixbuf", pg->bg->pixbuf,
+          "width-in-pixels", TRUE, "height-in-pixels", TRUE,
+          NULL);
+      gnome_canvas_item_new(groupView,
           gnome_canvas_pixbuf_get_type(), 
           "pixbuf", pg->bg->pixbuf,
           "width-in-pixels", TRUE, "height-in-pixels", TRUE, 
           NULL);
+    }
     else
+    {
       gnome_canvas_item_new(group,
+          gnome_canvas_pixbuf_get_type(),
+          "pixbuf", pg->bg->pixbuf,
+          "width", pg->width, "height", pg->height,
+          "width-set", TRUE, "height-set", TRUE,
+          NULL);
+      gnome_canvas_item_new(groupView,
           gnome_canvas_pixbuf_get_type(), 
           "pixbuf", pg->bg->pixbuf,
           "width", pg->width, "height", pg->height, 
           "width-set", TRUE, "height-set", TRUE, 
           NULL);
+    }
     lower_canvas_item_to(pg->group, pg->bg->canvas_item, NULL);
+    lower_canvas_item_to(pg->viewingGroup, pg->bg->canvas_item_view, NULL);
   }
 
   if (pg->bg->ruling == RULING_NONE) return;
