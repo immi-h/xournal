@@ -1682,13 +1682,24 @@ void print_page_to_cairo(cairo_t *cr, struct Page *pg, gdouble width, gdouble he
           cairo_stroke(cr);
           old_thickness = item->brush.thickness;
         } else {
-          for (i=0; i<item->path->num_points-1; i++, pt+=2) {
-            cairo_move_to(cr, pt[0], pt[1]);
-            cairo_set_line_width(cr, item->widths[i]);
-            cairo_line_to(cr, pt[2], pt[3]);
-            cairo_stroke(cr);
+          for (i=0; i<item->path->num_points; i++, pt+=2) {
+            double wh = item->widths[i] / 2;
+            cairo_move_to(cr, pt[0] + wh, pt[1]);
+            cairo_arc(cr, pt[0], pt[1], wh, 0, 360);
+                        
+            if (i < item->path->num_points-1) {
+              double polypt[8];
+              gnome_canvas_get_butt_points(pt[0], pt[1], pt[2], pt[3], item->widths[i+1], 0,
+                polypt+0, polypt+1, polypt+2, polypt+3);
+              gnome_canvas_get_butt_points(pt[2], pt[3], pt[0], pt[1], item->widths[i], 0,
+                polypt+4, polypt+5, polypt+6, polypt+7);
+              cairo_move_to(cr, polypt[0], polypt[1]);
+              cairo_line_to(cr, polypt[2], polypt[3]);
+              cairo_line_to(cr, polypt[4], polypt[5]);
+              cairo_line_to(cr, polypt[6], polypt[7]);
+            }
           }
-          old_thickness = 0.0;
+          cairo_fill(cr);
         }
       }
       if (item->type == ITEM_TEXT) {

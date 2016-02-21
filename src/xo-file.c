@@ -168,7 +168,7 @@ gboolean save_journal(const char *filename, gboolean is_auto)
   setlocale(LC_NUMERIC, "C");
   
   gzprintf(f, "<?xml version=\"1.0\" standalone=\"no\"?>\n"
-     "<xournal version=\"" VERSION "\">\n"
+     "<xournal version=\"" VERSION "\" widths-of-ends=\"1\">\n"
      "<title>Xournal document - see http://math.mit.edu/~auroux/software/xournal/</title>\n");
   for (pagelist = journal.pages; pagelist!=NULL; pagelist = pagelist->next) {
     pg = (struct Page *)pagelist->data;
@@ -259,10 +259,13 @@ gboolean save_journal(const char *filename, gboolean is_auto)
             gzputs(f, color_names[item->brush.color_no]);
           else
             gzprintf(f, "#%08x", item->brush.color_rgba);
-          gzprintf(f, "\" width=\"%.2f", item->brush.thickness);
-          if (item->brush.variable_width)
-            for (i=0;i<item->path->num_points-1;i++)
-              gzprintf(f, " %.2f", item->widths[i]);
+          gzprintf(f, "\" width=\"", item->brush.thickness);
+          if (item->brush.variable_width) {
+            for (i=0;i<item->path->num_points;i++)
+              gzprintf(f, " %.2f"+(i==0), item->widths[i]);  // greetings from the IOCCC ;-)
+          } else {
+            gzprintf(f, "%.2f", item->brush.thickness);
+          }
           gzprintf(f, "\">\n");
           for (i=0;i<2*item->path->num_points;i++)
             gzprintf(f, "%.2f ", item->path->coords[i]);
@@ -515,6 +518,8 @@ struct Layer *tmpLayer;
 struct Item *tmpItem;
 char *tmpFilename;
 struct Background *tmpBg_pdf;
+gboolean widths_of_ends;
+
 
 GError *xoj_invalid(void)
 {
@@ -538,6 +543,16 @@ void xoj_parser_start_element(GMarkupParseContext *context,
       return;
     }
     // nothing special to do
+    // ... well, almost nothing:
+    if (!strcmp(element_name, "xournal")) {
+      while (*attribute_names!=NULL) {
+        if (!strcmp(*attribute_names, "widths-of-ends")) {
+          widths_of_ends = TRUE;
+        }
+        attribute_names++;
+        attribute_values++;
+      }
+    }
   }
   else if (!strcmp(element_name, "page")) { // start of a page
     if (tmpPage != NULL) {
@@ -728,6 +743,9 @@ void xoj_parser_start_element(GMarkupParseContext *context,
         cleanup_numeric((gchar *)*attribute_values);
         tmpItem->brush.thickness = g_ascii_strtod(*attribute_values, &ptr);
         if (ptr == *attribute_values) *error = xoj_invalid();
+        /* For variable width items, the brush.thickness will be set to something
+           wrong. I hope it's not used anyway. */
+        ptr = *attribute_values;
         i = 0;
         while (*ptr!=0) {
           realloc_cur_widths(i+1);
@@ -736,11 +754,15 @@ void xoj_parser_start_element(GMarkupParseContext *context,
           ptr = tmpptr;
           i++;
         }
-        tmpItem->brush.variable_width = (i>0);
-        if (i>0) {
+        tmpItem->brush.variable_width = (i>1);
+        if (i>1) {
+          if (!widths_of_ends) {
+            ui.cur_widths[i-1] = ui.cur_widths[i-2];
+            ui.cur_widths[0] = ui.cur_widths[1];
+          }
           tmpItem->brush.variable_width = TRUE;
           tmpItem->widths = (gdouble *) g_memdup(ui.cur_widths, i*sizeof(gdouble));
-          ui.cur_path.num_points =  i+1;
+          ui.cur_path.num_points =  i;
         }
         has_attr |= 1;
       }
@@ -1086,6 +1108,7 @@ gboolean open_journal(char *filename)
   error = NULL;
   tmpBg_pdf = NULL;
   maybe_pdf = TRUE;
+  widths_of_ends = FALSE;
 
   while (valid && !gzeof(f)) {
     len = gzread(f, buffer, 1000);
