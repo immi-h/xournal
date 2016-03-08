@@ -9,7 +9,7 @@
  */
 typedef enum {
     Detached=0,
-    Togheter,
+    Together,
     TopLeft,
     Center,
     SameHeight, //copy the entire width of the main window
@@ -33,6 +33,7 @@ typedef struct ViewIndicator{
 
 typedef struct CopyWindow{
     gboolean visible;
+    gboolean backgroundVisible;
     FollowScrollMode scrollMode;
     GnomeCanvas* canvas;
     ViewIndicator viewIndicator;
@@ -88,5 +89,6 @@ void copy_window_restore();
  */
 void set_copy_window_visible(gboolean visible);
 
+void copy_window_cleanup();
 #endif // XOCOPYWINDOW
 

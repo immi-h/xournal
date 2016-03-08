@@ -68,6 +68,8 @@
 
 /* a string (+ aux data) that maintains a refcount */
 
+#define COPY_WINDOW_ZOOM_PER_CLICK 1.1
+
 typedef struct Refstring {
   int nref;
   char *s;
@@ -151,6 +153,7 @@ extern guint predef_bgcolors_rgba[COLOR_MAX];
 #define TOOL_VERTSPACE    6
 #define TOOL_HAND         7
 #define TOOL_IMAGE        8
+
 #define NUM_STROKE_TOOLS  3
 #define NUM_TOOLS         9
 #define NUM_BUTTONS       3
@@ -251,8 +254,6 @@ typedef struct Selection {
   struct Layer *move_layer;
   float move_pagedelta;
 } Selection;
-
-#include "xo-copywindow.h"
 
 typedef struct UIData {
   int pageno, layerno; // the current page and layer
@@ -384,7 +385,6 @@ typedef struct UndoItem {
 
 #define MULTIOP_CONT_REDO 1 // not the last in a multiop, so keep redoing
 #define MULTIOP_CONT_UNDO 2 // not the first in a multiop, so keep undoing
-
 
 typedef struct BgPdfRequest {
   int pageno;

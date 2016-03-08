@@ -148,6 +148,7 @@ struct Page *new_page_with_bg(struct Background *bg, double width, double height
 
   pg->group = (GnomeCanvasGroup *) gnome_canvas_item_new(
       gnome_canvas_root(canvas), gnome_canvas_clipgroup_get_type(), NULL);
+
   make_page_clipbox(pg);
   update_canvas_bg(pg);
 
@@ -903,22 +904,24 @@ void update_canvas_bg(struct Page *pg)
         "width", pg->width, "height", pg->height, 
         "width-set", TRUE, "height-set", TRUE, 
         NULL);
-    lower_canvas_item_to(pg->group,        pg->bg->canvas_item,      NULL);
+    lower_canvas_item_to(pg->group       , pg->bg->canvas_item,      NULL);
     lower_canvas_item_to(pg->viewingGroup, pg->bg->canvas_item_view, NULL);
   }
-
   if (pg->bg->type == BG_PDF)
   {
+    if(ui.copyWindow.backgroundVisible)
+    {
     pg->bg->canvas_item_view = gnome_canvas_item_new(pg->viewingGroup,
                                gnome_canvas_group_get_type(), NULL);
+    groupView = GNOME_CANVAS_GROUP(pg->bg->canvas_item_view);
+    lower_canvas_item_to(pg->viewingGroup, pg->bg->canvas_item_view, NULL);
+    }
 
     pg->bg->canvas_item = gnome_canvas_item_new(pg->group,
                                gnome_canvas_group_get_type(), NULL);
 
     group = GNOME_CANVAS_GROUP(pg->bg->canvas_item);
-    groupView = GNOME_CANVAS_GROUP(pg->bg->canvas_item_view);
 
-    lower_canvas_item_to(pg->viewingGroup, pg->bg->canvas_item_view, NULL);
     lower_canvas_item_to(pg->group, pg->bg->canvas_item, NULL);
 
     if (pg->bg->pixbuf == NULL) return;
@@ -931,11 +934,12 @@ void update_canvas_bg(struct Page *pg)
           "pixbuf", pg->bg->pixbuf,
           "width-in-pixels", TRUE, "height-in-pixels", TRUE,
           NULL);
-      gnome_canvas_item_new(groupView,
-          gnome_canvas_pixbuf_get_type(), 
-          "pixbuf", pg->bg->pixbuf,
-          "width-in-pixels", TRUE, "height-in-pixels", TRUE, 
-          NULL);
+      if(ui.copyWindow.backgroundVisible)
+          gnome_canvas_item_new(groupView,
+              gnome_canvas_pixbuf_get_type(),
+              "pixbuf", pg->bg->pixbuf,
+              "width-in-pixels", TRUE, "height-in-pixels", TRUE,
+              NULL);
     }
     else
     {

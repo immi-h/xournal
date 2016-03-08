@@ -85,6 +85,7 @@ void new_journal(void)
   ui.saved = TRUE;
   ui.filename = NULL;
   update_file_name(NULL);
+  
 }
 
 // check attachment names
@@ -487,6 +488,7 @@ gboolean close_journal(void)
   shutdown_bgpdf();
   delete_journal(&journal);
   autosave_cleanup(&ui.autosave_filename_list);
+  copy_window_cleanup();
   
   return TRUE;
   /* note: various members of ui and journal are now in invalid states,
