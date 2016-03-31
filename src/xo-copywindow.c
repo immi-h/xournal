@@ -15,11 +15,12 @@ GtkWidget* winView;
 
 
 struct {
-    GtkToolButton* cursorVisible;
-    GtkToolButton* windowVisible;
-    GtkComboBox  * scrollMode;
-    GtkToolButton* zoomIn;
-    GtkToolButton* zoomOut;
+    GtkToolButton*   cursorVisible;
+    GtkToggleButton* windowVisible;
+    GtkToggleButton* viewIndicatorVisible;
+    GtkComboBox  *   scrollMode;
+    GtkToolButton*   zoomIn;
+    GtkToolButton*   zoomOut;
 } menuItems;
 
 
@@ -33,6 +34,7 @@ void set_copy_cursor_visible(gboolean visible);
 
 //borrowing this from selection.c
 extern void make_dashed(GnomeCanvasItem* item);
+
 
 GtkWidget* create_winView(){
 
@@ -53,7 +55,7 @@ GtkWidget* create_winView(){
 
     gtk_container_add(GTK_CONTAINER(winView), vbox);
     gtk_box_pack_start(GTK_BOX(vbox), scrolledWindowView, TRUE, TRUE, 5);
-    gtk_container_add(GTK_CONTAINER(scrolledWindowView), ui.copyWindow.canvas);
+    gtk_container_add(GTK_CONTAINER(scrolledWindowView), GTK_WIDGET(ui.copyWindow.canvas));
 
     gnome_canvas_set_pixels_per_unit (ui.copyWindow.canvas, ui.zoomView);
 
@@ -79,23 +81,31 @@ GtkWidget* create_copy_toolbar(){
     
     
 
-    menuItems.windowVisible = gtk_toggle_button_new_with_label("gtk-copy");
+    menuItems.windowVisible        = gtk_toggle_button_new_with_label("gtk-copy");
+    menuItems.cursorVisible        = gtk_toggle_button_new();
+    menuItems.scrollMode           = gtk_combo_box_new_text();
+    menuItems.viewIndicatorVisible = gtk_toggle_button_new();
+    menuItems.zoomIn               = gtk_tool_button_new_from_stock("gtk-zoom-in");
+    menuItems.zoomOut	           = gtk_tool_button_new_from_stock("gtk-zoom-out");
+
     gtk_button_set_use_stock(menuItems.windowVisible, TRUE);
-    menuItems.cursorVisible = gtk_toggle_button_new();
-    menuItems.scrollMode    = gtk_combo_box_new_text();
-    menuItems.zoomIn        = gtk_tool_button_new_from_stock("gtk-zoom-in");
-    menuItems.zoomOut	    = gtk_tool_button_new_from_stock("gtk-zoom-out");
+    gtk_button_set_label( menuItems.windowVisible, "");
 
     image = create_pixmap(0, "pencilIndicator.png");
     gtk_button_set_image (menuItems.cursorVisible, image);
+    image = create_pixmap (0, "rect-view-indicator.png");
+    gtk_button_set_image(menuItems.viewIndicatorVisible, image);
 
-    gtk_signal_connect(menuItems.windowVisible, "toggled", G_CALLBACK(&on_tooltoggle_toggled),NULL);
-    gtk_signal_connect(menuItems.cursorVisible, "toggled", G_CALLBACK(&on_tooltoggle_toggled),NULL);
-    gtk_signal_connect(menuItems.scrollMode   , "changed", G_CALLBACK(&on_scroll_combo_changed),NULL);
-    gtk_signal_connect(menuItems.zoomIn       , "clicked", G_CALLBACK(&on_copy_window_zoombutton_clicked), NULL);
-    gtk_signal_connect(menuItems.zoomOut      , "clicked", G_CALLBACK(&on_copy_window_zoombutton_clicked), NULL);
+    gtk_signal_connect(menuItems.windowVisible       , "toggled", G_CALLBACK(&on_tooltoggle_toggled),NULL);
+    gtk_signal_connect(menuItems.cursorVisible       , "toggled", G_CALLBACK(&on_tooltoggle_toggled),NULL);
+    gtk_signal_connect(menuItems.viewIndicatorVisible, "toggled", G_CALLBACK(&on_tooltoggle_toggled),NULL);
+
+    gtk_signal_connect(menuItems.scrollMode          , "changed", G_CALLBACK(&on_scroll_combo_changed),NULL);
+    gtk_signal_connect(menuItems.zoomIn              , "clicked", G_CALLBACK(&on_copy_window_zoombutton_clicked), NULL);
+    gtk_signal_connect(menuItems.zoomOut             , "clicked", G_CALLBACK(&on_copy_window_zoombutton_clicked), NULL);
 
 
+    //This should be in the same order as the enum
     gtk_combo_box_append_text(menuItems.scrollMode, "Detached");
     gtk_combo_box_append_text(menuItems.scrollMode, "Scroll together");
     gtk_combo_box_append_text(menuItems.scrollMode, "Top left corner");
@@ -104,19 +114,21 @@ GtkWidget* create_copy_toolbar(){
     gtk_combo_box_append_text(menuItems.scrollMode, "same width");
     gtk_combo_box_append_text(menuItems.scrollMode, "Always fit");
 
-    gtk_widget_show(menuItems.windowVisible);
-    gtk_widget_show(menuItems.cursorVisible);
-    gtk_widget_show(menuItems.scrollMode);
-    gtk_widget_show(menuItems.zoomIn);
-    gtk_widget_show(menuItems.zoomOut);
+    gtk_widget_show(GTK_WIDGET(menuItems.windowVisible));
+    gtk_widget_show(GTK_WIDGET(menuItems.cursorVisible));
+    gtk_widget_show(GTK_WIDGET(menuItems.scrollMode));
+    gtk_widget_show(GTK_WIDGET(menuItems.viewIndicatorVisible));
+    gtk_widget_show(GTK_WIDGET(menuItems.zoomIn));
+    gtk_widget_show(GTK_WIDGET(menuItems.zoomOut));
 
-    gtk_container_add(GTK_CONTAINER(toolbar), menuItems.cursorVisible);
-    gtk_container_add(GTK_CONTAINER(toolbar), menuItems.windowVisible);
-    gtk_container_add(GTK_CONTAINER(toolbar), menuItems.scrollMode);
-    gtk_container_add(GTK_CONTAINER(toolbar), menuItems.zoomIn);
-    gtk_container_add(GTK_CONTAINER(toolbar), menuItems.zoomOut);
+    gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(menuItems.cursorVisible));
+    gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(menuItems.windowVisible));
+    gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(menuItems.scrollMode));
+    gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(menuItems.viewIndicatorVisible));
+    gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(menuItems.zoomIn));
+    gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(menuItems.zoomOut));
 
-    return toolbar;
+    return GTK_WIDGET(toolbar);
 }
 
 
@@ -140,9 +152,11 @@ void update_copy_scroll()
   struct {
       float x,y;
   } main;
-  main.x = gtk_adjustment_get_value(mainAdjH);
-  main.y = gtk_adjustment_get_value(mainAdjV);
+  main.x = gtk_adjustment_get_value(mainAdjH) / ui.zoom;
+  main.y = gtk_adjustment_get_value(mainAdjV) / ui.zoom;
 
+  main.x *= ui.zoomView;
+  main.y *= ui.zoomView;
 
   // zoom factor to fit the width
   double widthZoom = (GTK_WIDGET(ui.copyWindow.canvas))->allocation.width/ui.cur_page->width;
@@ -195,6 +209,17 @@ void update_viewIndicator(){
     if(!ui.copyWindow.viewIndicator.item){
         create_viewIndicator();
     }
+
+    if(ui.copyWindow.viewIndicator.visible){
+        gnome_canvas_item_show(ui.copyWindow.viewIndicator.item);
+    }
+    else
+    {
+        gnome_canvas_item_hide(ui.copyWindow.viewIndicator.item);
+        return;
+    }
+
+
     GtkAdjustment* vAdj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scrolledWindowView));
     GtkAdjustment* hAdj = gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(scrolledWindowView));
 
@@ -214,7 +239,6 @@ void update_viewIndicator(){
       "y2", top+ysize,
     NULL);
 
-    gnome_canvas_item_show(ui.copyWindow.viewIndicator.item);
 
     make_dashed(ui.copyWindow.viewIndicator.item);
     gnome_canvas_item_raise_to_top(ui.copyWindow.viewIndicator.item);
@@ -264,11 +288,13 @@ void create_cursorIndicator()
         "width-units",		1.,
         NULL
     );
-
     ui.copyWindow.cursorIndicator = group;
 }
 
 void update_cursor_indicator(GdkEventMotion* event){
+
+    if(ui.copyWindow.visible == FALSE)
+        return;
 
     double newPos[2];
     get_pointer_coords(event, newPos);
@@ -287,10 +313,6 @@ void update_cursor_indicator(GdkEventMotion* event){
 ///////////////////////////////////
 ///  CALLBACKS
 
-///////////////////////////////////
-/// \brief on_copyWindow_visibility_toggled callback for when th visibility button is clicked
-/// \param menuitem  the vilibilty toggle switch
-/// \param user_data nothing usefull
 ///
 
 void on_scroll_combo_changed (GtkComboBox *combobox, gpointer user_data){
@@ -311,6 +333,10 @@ void on_tooltoggle_toggled (GtkToolButton *item, gpointer user_data){
     }
     else if (item == menuItems.cursorVisible){
         set_copy_cursor_visible(active);
+    }
+    else if(item == menuItems.viewIndicatorVisible){
+        ui.copyWindow.viewIndicator.visible = active;
+        update_viewIndicator();
     }
 }
 

@@ -993,7 +993,6 @@ on_viewZoomIn_activate                 (GtkMenuItem     *menuitem,
 {
   if (ui.zoom > MAX_ZOOM) return;
   ui.zoom *= ui.zoom_step_factor;
-  ui.zoomView = ui.zoom;
   gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
   rescale_text_items();
@@ -1009,7 +1008,6 @@ on_viewZoomOut_activate                (GtkMenuItem     *menuitem,
 {
   if (ui.zoom < MIN_ZOOM) return;
   ui.zoom /= ui.zoom_step_factor;
-  ui.zoomView = ui.zoom;
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
   gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
   rescale_text_items();
@@ -3050,7 +3048,6 @@ on_vscroll_changed                     (GtkAdjustment   *adjustment,
   
 
 
-  update_copy_scroll();
 
   if (ui.view_continuous!=VIEW_MODE_CONTINUOUS) return;
   
@@ -3075,6 +3072,7 @@ on_vscroll_changed                     (GtkAdjustment   *adjustment,
     end_text();
     do_switch_page(ui.pageno, FALSE, FALSE);
   }
+  update_copy_scroll();
 }
 
 void
@@ -3108,6 +3106,8 @@ on_hscroll_changed                     (GtkAdjustment   *adjustment,
     end_text();
     do_switch_page(ui.pageno, FALSE, FALSE);
   }
+
+  update_copy_scroll();
 }
 
 
