@@ -653,7 +653,7 @@ void make_canvas_stroke_segment(struct Item *item, double * pt, double * w)
 
 }
 
-int CNTP, CNTS, CNTT;
+//int CNTP, CNTS, CNTT; // profiling...
 
 void make_canvas_item_one(GnomeCanvasGroup *group, struct Item *item)
 {
@@ -679,7 +679,7 @@ void make_canvas_item_one(GnomeCanvasGroup *group, struct Item *item)
       disc_done = FALSE;
       j0 = 0;
 
-      CNTP += item->path->num_points - 1;
+      //CNTP += item->path->num_points - 1; // profiling...
 
       while (j0 < item->path->num_points - 1) {
           
@@ -687,8 +687,8 @@ void make_canvas_item_one(GnomeCanvasGroup *group, struct Item *item)
         
         j = j0 + 1;
         while (j < item->path->num_points &&
-               item->widths[j] < wmin * 1.2 &&
-               item->widths[j] * 1.2 > wmax) {
+               item->widths[j] < wmin * LINE_WIDTH_PRECISION &&
+               item->widths[j] * LINE_WIDTH_PRECISION > wmax) {
           if (item->widths[j] < wmin) wmin = item->widths[j];
           if (item->widths[j] > wmax) wmax = item->widths[j];
           j++;
@@ -703,14 +703,14 @@ void make_canvas_item_one(GnomeCanvasGroup *group, struct Item *item)
               "cap-style", GDK_CAP_ROUND, "join-style", GDK_JOIN_ROUND, 
               "fill-color-rgba", item->brush.color_rgba,
               "width-units", (wmin + wmax) / 2, NULL);
-          disc_done = TRUE; CNTS++;
+          disc_done = TRUE; //CNTS++; // profiling...
           j0 = j - 1;
         } else { /* j == j0+1; draw trapeze from j0 to j */
           if (!disc_done) {
             make_canvas_stroke_disc(item, item->path->coords+2*j0, item->widths+j0);
           }
           make_canvas_stroke_segment(item, item->path->coords+2*j0, item->widths+j0);
-          disc_done = FALSE; CNTT++;
+          disc_done = FALSE; //CNTT++; // profiling...
           j0 = j;
         }
       }
@@ -765,9 +765,9 @@ void make_canvas_items(void)
   struct Item *item;
   GList *pagelist, *layerlist, *itemlist;
   
-  int ti; // profiling...
-  ti = clock(); // profiling...
-  CNTP=CNTS=CNTT=0; // profiling...
+  //int ti; // profiling...
+  //ti = clock(); // profiling...
+  //CNTP=CNTS=CNTT=0; // profiling...
   
   for (pagelist = journal.pages; pagelist!=NULL; pagelist = pagelist->next) {
     pg = (struct Page *)pagelist->data;
@@ -790,7 +790,7 @@ void make_canvas_items(void)
     }
   }
   
-  printf("Cnts: P=%d, S=%d, T=%d; Time: %d\n", CNTP, CNTS, CNTT, (int)(clock() - ti)); // profiling...
+  //printf("Cnts: P=%d, S=%d, T=%d; Time: %d\n", CNTP, CNTS, CNTT, (int)(clock() - ti)); // profiling...
 }
 
 void update_canvas_bg(struct Page *pg)

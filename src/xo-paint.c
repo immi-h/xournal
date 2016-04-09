@@ -293,8 +293,21 @@ void continue_stroke(GdkEvent *event)
      into an internal structure */
 
   if (ui.cur_item->brush.variable_width) {
-    make_canvas_stroke_segment(ui.cur_item, pt, ui.cur_widths+ui.cur_path.num_points-2);
-    make_canvas_stroke_disc(ui.cur_item, pt + 2, ui.cur_widths+ui.cur_path.num_points-1);
+    if (ui.cur_widths[ui.cur_path.num_points-1] < ui.cur_widths[ui.cur_path.num_points-2] * LINE_WIDTH_PRECISION &&
+        ui.cur_widths[ui.cur_path.num_points-2] < ui.cur_widths[ui.cur_path.num_points-1] * LINE_WIDTH_PRECISION) {
+      GnomeCanvasPoints seg;
+      seg.coords = pt; 
+      seg.num_points = 2;
+      seg.ref_count = 1;
+      gnome_canvas_item_new((GnomeCanvasGroup *)ui.cur_item->canvas_item,
+         gnome_canvas_line_get_type(), "points", &seg,
+         "cap-style", GDK_CAP_ROUND, "join-style", GDK_JOIN_ROUND,
+         "fill-color-rgba", ui.cur_item->brush.color_rgba,
+         "width-units", (ui.cur_widths[ui.cur_path.num_points-2] + ui.cur_widths[ui.cur_path.num_points-1]) / 2, NULL);      
+    } else {
+      make_canvas_stroke_segment(ui.cur_item, pt, ui.cur_widths+ui.cur_path.num_points-2);
+      make_canvas_stroke_disc(ui.cur_item, pt + 2, ui.cur_widths+ui.cur_path.num_points-1);
+   }
   } else {
     GnomeCanvasPoints seg;
     seg.coords = pt; 

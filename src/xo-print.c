@@ -24,6 +24,7 @@
 #include <libgnomecanvas/libgnomecanvas.h>
 #include <zlib.h>
 #include <string.h>
+#include <math.h>
 #include <locale.h>
 #include <pango/pango.h>
 #include <pango/pangofc-font.h>
@@ -1682,24 +1683,43 @@ void print_page_to_cairo(cairo_t *cr, struct Page *pg, gdouble width, gdouble he
           cairo_stroke(cr);
           old_thickness = item->brush.thickness;
         } else {
-          for (i=0; i<item->path->num_points; i++, pt+=2) {
-            double wh = item->widths[i] / 2;
-            cairo_move_to(cr, pt[0] + wh, pt[1]);
-            cairo_arc(cr, pt[0], pt[1], wh, 0, 360);
-                        
-            if (i < item->path->num_points-1) {
-              double polypt[8];
-              gnome_canvas_get_butt_points(pt[0], pt[1], pt[2], pt[3], item->widths[i+1], 0,
-                polypt+0, polypt+1, polypt+2, polypt+3);
-              gnome_canvas_get_butt_points(pt[2], pt[3], pt[0], pt[1], item->widths[i], 0,
-                polypt+4, polypt+5, polypt+6, polypt+7);
-              cairo_move_to(cr, polypt[0], polypt[1]);
-              cairo_line_to(cr, polypt[2], polypt[3]);
-              cairo_line_to(cr, polypt[4], polypt[5]);
-              cairo_line_to(cr, polypt[6], polypt[7]);
+
+          double wmin, wmax;
+          int j, j0;
+          j0 = 0;
+    
+          while (j0 < item->path->num_points - 1) {
+            
+            wmin = wmax = item->widths[j0];
+            
+            j = j0 + 1;
+            while (j < item->path->num_points &&
+                   item->widths[j] < wmin * LINE_WIDTH_PRECISION &&
+                   item->widths[j] * LINE_WIDTH_PRECISION > wmax) {
+              if (item->widths[j] < wmin) wmin = item->widths[j];
+              if (item->widths[j] > wmax) wmax = item->widths[j];
+              j++;
+            }
+            
+            if (j0 < j - 1) {
+              /* draw from j0 to j-1 */
+              cairo_set_line_width(cr, (wmin + wmax) / 2);
+              cairo_move_to(cr, pt[2*j0], pt[2*j0+1]);
+              for (i = j0 + 1; i <= j - 1; i++) {
+                cairo_line_to(cr, pt[2*i], pt[2*i+1]);
+              }
+              cairo_stroke(cr);
+              j0 = j - 1;
+            } else { /* j == j0+1; draw trapeze from j0 to j... including the discs */
+              double angle = atan2(pt[2*j+1]-pt[2*j0+1], pt[2*j]-pt[2*j0]);
+              /* The following it not perfect if the two line widths differ a lot... */
+              cairo_arc(cr, pt[2*j0], pt[2*j0 + 1], item->widths[j0]/2, angle + M_PI / 2, angle - M_PI / 2);
+              cairo_arc(cr, pt[2*j], pt[2*j + 1], item->widths[j]/2, angle - M_PI / 2, angle + M_PI / 2);
+              cairo_fill(cr);
+              j0 = j;
             }
           }
-          cairo_fill(cr);
+
         }
       }
       if (item->type == ITEM_TEXT) {
