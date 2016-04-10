@@ -168,7 +168,7 @@ gboolean save_journal(const char *filename, gboolean is_auto)
   setlocale(LC_NUMERIC, "C");
   
   gzprintf(f, "<?xml version=\"1.0\" standalone=\"no\"?>\n"
-     "<xournal version=\"" VERSION "\" widths-of-ends=\"1\">\n"
+     "<xournal version=\"" VERSION "\">\n"
      "<title>Xournal document - see http://math.mit.edu/~auroux/software/xournal/</title>\n");
   for (pagelist = journal.pages; pagelist!=NULL; pagelist = pagelist->next) {
     pg = (struct Page *)pagelist->data;
@@ -259,14 +259,14 @@ gboolean save_journal(const char *filename, gboolean is_auto)
             gzputs(f, color_names[item->brush.color_no]);
           else
             gzprintf(f, "#%08x", item->brush.color_rgba);
-          gzprintf(f, "\" width=\"", item->brush.thickness);
+          gzprintf(f, "\" width=\"%.2f\"", item->brush.thickness);
           if (item->brush.variable_width) {
+            gzprintf(f, " widths=\"");
             for (i=0;i<item->path->num_points;i++)
               gzprintf(f, " %.2f"+(i==0), item->widths[i]);  // greetings from the IOCCC ;-)
-          } else {
-            gzprintf(f, "%.2f", item->brush.thickness);
+            gzprintf(f, "\"");
           }
-          gzprintf(f, "\">\n");
+          gzprintf(f, ">\n");
           for (i=0;i<2*item->path->num_points;i++)
             gzprintf(f, "%.2f ", item->path->coords[i]);
           gzprintf(f, "\n</stroke>\n");
@@ -518,7 +518,6 @@ struct Layer *tmpLayer;
 struct Item *tmpItem;
 char *tmpFilename;
 struct Background *tmpBg_pdf;
-gboolean widths_of_ends;
 
 
 GError *xoj_invalid(void)
@@ -543,16 +542,6 @@ void xoj_parser_start_element(GMarkupParseContext *context,
       return;
     }
     // nothing special to do
-    // ... well, almost nothing:
-    if (!strcmp(element_name, "xournal")) {
-      while (*attribute_names!=NULL) {
-        if (!strcmp(*attribute_names, "widths-of-ends")) {
-          widths_of_ends = TRUE;
-        }
-        attribute_names++;
-        attribute_values++;
-      }
-    }
   }
   else if (!strcmp(element_name, "page")) { // start of a page
     if (tmpPage != NULL) {
@@ -733,6 +722,7 @@ void xoj_parser_start_element(GMarkupParseContext *context,
     tmpItem->path = NULL;
     tmpItem->canvas_item = NULL;
     tmpItem->widths = NULL;
+    tmpItem->brush.variable_width = FALSE;
     tmpLayer->items = g_list_append(tmpLayer->items, tmpItem);
     tmpLayer->nitems++;
     // scan for tool, color, and width attributes
@@ -743,10 +733,8 @@ void xoj_parser_start_element(GMarkupParseContext *context,
         cleanup_numeric((gchar *)*attribute_values);
         tmpItem->brush.thickness = g_ascii_strtod(*attribute_values, &ptr);
         if (ptr == *attribute_values) *error = xoj_invalid();
-        /* For variable width items, the brush.thickness will be set to something
-           wrong. I hope it's not used anyway. */
-        ptr = *attribute_values;
-        i = 0;
+        /* The following is only neede to read old xoj files */
+        i = 1;
         while (*ptr!=0) {
           realloc_cur_widths(i+1);
           ui.cur_widths[i] = g_ascii_strtod(ptr, &tmpptr);
@@ -754,20 +742,36 @@ void xoj_parser_start_element(GMarkupParseContext *context,
           ptr = tmpptr;
           i++;
         }
-        tmpItem->brush.variable_width = (i>1);
         if (i>1) {
-          if (!widths_of_ends) {
-            ui.cur_widths[i-1] = ui.cur_widths[i-2];
-            ui.cur_widths[0] = ui.cur_widths[1];
-          }
+          if (tmpItem->brush.variable_width) *error = xoj_invalid();
           tmpItem->brush.variable_width = TRUE;
+          ui.cur_widths[0] = ui.cur_widths[1];
+          ui.cur_widths[i-1] = ui.cur_widths[i-2]; // last width seems to be invalid
           tmpItem->widths = (gdouble *) g_memdup(ui.cur_widths, i*sizeof(gdouble));
-          ui.cur_path.num_points =  i;
+          ui.cur_path.num_points = i;
         }
         has_attr |= 1;
       }
-      else if (!strcmp(*attribute_names, "color")) {
+      else if (!strcmp(*attribute_names, "widths")) {
         if (has_attr & 2) *error = xoj_invalid();
+        if (tmpItem->brush.variable_width) *error = xoj_invalid();
+        tmpItem->brush.variable_width = TRUE;
+        cleanup_numeric((gchar *)*attribute_values);
+        i = 0;
+        ptr = *attribute_values;
+        while (*ptr!=0) {
+          realloc_cur_widths(i+1);
+          ui.cur_widths[i] = g_ascii_strtod(ptr, &tmpptr);
+          if (tmpptr == ptr) break;
+          ptr = tmpptr;
+          i++;
+        }
+        tmpItem->widths = (gdouble *) g_memdup(ui.cur_widths, i*sizeof(gdouble));
+        ui.cur_path.num_points = i;
+        has_attr |= 2;
+      }
+      else if (!strcmp(*attribute_names, "color")) {
+        if (has_attr & 4) *error = xoj_invalid();
         tmpItem->brush.color_no = COLOR_OTHER;
         for (i=0; i<COLOR_MAX; i++)
           if (!strcmp(*attribute_values, color_names[i])) {
@@ -779,23 +783,23 @@ void xoj_parser_start_element(GMarkupParseContext *context,
           tmpItem->brush.color_rgba = strtoul(*attribute_values + 1, &ptr, 16);
           if (*ptr!=0) *error = xoj_invalid();
         }
-        has_attr |= 2;
+        has_attr |= 4;
       }
       else if (!strcmp(*attribute_names, "tool")) {
-        if (has_attr & 4) *error = xoj_invalid();
+        if (has_attr & 8) *error = xoj_invalid();
         tmpItem->brush.tool_type = -1;
         for (i=0; i<NUM_STROKE_TOOLS; i++)
           if (!strcmp(*attribute_values, tool_names[i])) {
             tmpItem->brush.tool_type = i;
           }
         if (tmpItem->brush.tool_type == -1) *error = xoj_invalid();
-        has_attr |= 4;
+        has_attr |= 8;
       }
       else *error = xoj_invalid();
       attribute_names++;
       attribute_values++;
     }
-    if (has_attr!=7) *error = xoj_invalid();
+    if ((has_attr|2)!=15) *error = xoj_invalid();
     // finish filling the brush info
     tmpItem->brush.thickness_no = 0;  // who cares ?
     tmpItem->brush.tool_options = 0;  // who cares ?
@@ -1108,7 +1112,6 @@ gboolean open_journal(char *filename)
   error = NULL;
   tmpBg_pdf = NULL;
   maybe_pdf = TRUE;
-  widths_of_ends = FALSE;
 
   while (valid && !gzeof(f)) {
     len = gzread(f, buffer, 1000);
