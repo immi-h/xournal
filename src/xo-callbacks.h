@@ -20,6 +20,11 @@ void
 on_fileNew_activate                    (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
+/**
+ * @brief on_fileNewBackground_activate gets called when the *annotate pdf* option is selected.
+ * @param menuitem for the callback.
+ * @param user_data not used.
+ */
 void
 on_fileNewBackground_activate          (GtkMenuItem     *menuitem,
                                         gpointer         user_data);

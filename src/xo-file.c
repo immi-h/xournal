@@ -1565,6 +1565,7 @@ gboolean init_bgpdf(char *pdfname, gboolean create_pages, int file_domain)
     if (!pdfpage) continue;
     if (journal.npages < i) {
       bg = g_new(struct Background, 1);
+      memcpy(bg, ui.default_page.bg, sizeof(struct Background));
       bg->canvas_item = NULL;
       pg = NULL;
     } else {
