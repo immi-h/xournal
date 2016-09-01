@@ -746,7 +746,6 @@ void xoj_parser_start_element(GMarkupParseContext *context,
           if (tmpItem->brush.variable_width) *error = xoj_invalid();
           tmpItem->brush.variable_width = TRUE;
           ui.cur_widths[0] = ui.cur_widths[1];
-          ui.cur_widths[i-1] = ui.cur_widths[i-2]; // last width seems to be invalid
           tmpItem->widths = (gdouble *) g_memdup(ui.cur_widths, i*sizeof(gdouble));
           ui.cur_path.num_points = i;
         }
