@@ -634,7 +634,7 @@ void make_canvas_stroke_disc(struct Item *item, double * pt, double * w)
      "fill-color-rgba", item->brush.color_rgba, NULL);
 }
 
-void make_canvas_stroke_segment(struct Item *item, double * pt, double * w)
+void make_canvas_stroke_trapeze(struct Item *item, double * pt, double * w)
 {
   GnomeCanvasPoints poly;
   double polypt[8];
@@ -646,7 +646,7 @@ void make_canvas_stroke_segment(struct Item *item, double * pt, double * w)
     polypt+0, polypt+1, polypt+2, polypt+3);
   gnome_canvas_get_butt_points(pt[2], pt[3], pt[0], pt[1], w[0], 0,
     polypt+4, polypt+5, polypt+6, polypt+7);
-  
+
   gnome_canvas_item_new((GnomeCanvasGroup *) item->canvas_item,
      gnome_canvas_polygon_get_type(), "points", &poly,
      "fill-color-rgba", item->brush.color_rgba, NULL);
@@ -709,7 +709,7 @@ void make_canvas_item_one(GnomeCanvasGroup *group, struct Item *item)
           if (!disc_done) {
             make_canvas_stroke_disc(item, item->path->coords+2*j0, item->widths+j0);
           }
-          make_canvas_stroke_segment(item, item->path->coords+2*j0, item->widths+j0);
+          make_canvas_stroke_trapeze(item, item->path->coords+2*j0, item->widths+j0);
           disc_done = FALSE; //CNTT++; // profiling...
           j0 = j;
         }

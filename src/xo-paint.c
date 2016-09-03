@@ -305,7 +305,7 @@ void continue_stroke(GdkEvent *event)
          "fill-color-rgba", ui.cur_item->brush.color_rgba,
          "width-units", (ui.cur_widths[ui.cur_path.num_points-2] + ui.cur_widths[ui.cur_path.num_points-1]) / 2, NULL);      
     } else {
-      make_canvas_stroke_segment(ui.cur_item, pt, ui.cur_widths+ui.cur_path.num_points-2);
+      make_canvas_stroke_trapeze(ui.cur_item, pt, ui.cur_widths+ui.cur_path.num_points-2);
       make_canvas_stroke_disc(ui.cur_item, pt + 2, ui.cur_widths+ui.cur_path.num_points-1);
    }
   } else {
