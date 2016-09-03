@@ -1683,15 +1683,12 @@ void print_page_to_cairo(cairo_t *cr, struct Page *pg, gdouble width, gdouble he
           cairo_stroke(cr);
           old_thickness = item->brush.thickness;
         } else {
-
           double wmin, wmax;
           int j, j0;
           j0 = 0;
-    
+
           while (j0 < item->path->num_points - 1) {
-            
             wmin = wmax = item->widths[j0];
-            
             j = j0 + 1;
             while (j < item->path->num_points &&
                    item->widths[j] < wmin * LINE_WIDTH_PRECISION &&
@@ -1700,7 +1697,7 @@ void print_page_to_cairo(cairo_t *cr, struct Page *pg, gdouble width, gdouble he
               if (item->widths[j] > wmax) wmax = item->widths[j];
               j++;
             }
-            
+
             if (j0 < j - 1) {
               /* draw from j0 to j-1 */
               cairo_set_line_width(cr, (wmin + wmax) / 2);
@@ -1719,7 +1716,7 @@ void print_page_to_cairo(cairo_t *cr, struct Page *pg, gdouble width, gdouble he
               j0 = j;
             }
           }
-
+          old_thickness = 0.0;
         }
       }
       if (item->type == ITEM_TEXT) {
