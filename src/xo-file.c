@@ -259,14 +259,16 @@ gboolean save_journal(const char *filename, gboolean is_auto)
             gzputs(f, color_names[item->brush.color_no]);
           else
             gzprintf(f, "#%08x", item->brush.color_rgba);
-          gzprintf(f, "\" width=\"%.2f\"", item->brush.thickness);
+          gzprintf(f, "\" width=\"%.2f", item->brush.thickness);
           if (item->brush.variable_width) {
-            gzprintf(f, " widths=\"");
             for (i=0;i<item->path->num_points;i++)
-              gzprintf(f, " %.2f"+(i==0), item->widths[i]);  // greetings from the IOCCC ;-)
-            gzprintf(f, "\"");
+              gzprintf(f, " %.2f", item->widths[i]);
           }
-          gzprintf(f, ">\n");
+          gzprintf(f, "\">\n");
+          if (item->brush.variable_width) {
+            // dummy point, to ensure backwards compatibility
+            gzprintf(f, "%.2f %.2f ", item->path->coords[0], item->path->coords[1]);
+          }
           for (i=0;i<2*item->path->num_points;i++)
             gzprintf(f, "%.2f ", item->path->coords[i]);
           gzprintf(f, "\n</stroke>\n");
@@ -722,7 +724,6 @@ void xoj_parser_start_element(GMarkupParseContext *context,
     tmpItem->path = NULL;
     tmpItem->canvas_item = NULL;
     tmpItem->widths = NULL;
-    tmpItem->brush.variable_width = FALSE;
     tmpLayer->items = g_list_append(tmpLayer->items, tmpItem);
     tmpLayer->nitems++;
     // scan for tool, color, and width attributes
@@ -733,7 +734,6 @@ void xoj_parser_start_element(GMarkupParseContext *context,
         cleanup_numeric((gchar *)*attribute_values);
         tmpItem->brush.thickness = g_ascii_strtod(*attribute_values, &ptr);
         if (ptr == *attribute_values) *error = xoj_invalid();
-        /* The following is only neede to read old xoj files */
         i = 1;
         while (*ptr!=0) {
           realloc_cur_widths(i+1);
@@ -742,35 +742,18 @@ void xoj_parser_start_element(GMarkupParseContext *context,
           ptr = tmpptr;
           i++;
         }
+        tmpItem->brush.variable_width = (i>1);
         if (i>1) {
-          if (tmpItem->brush.variable_width) *error = xoj_invalid();
-          tmpItem->brush.variable_width = TRUE;
+          /* For the moment, pretend it's a file from an old xournal version, so
+             estimate the first width */
           ui.cur_widths[0] = ui.cur_widths[1];
           tmpItem->widths = (gdouble *) g_memdup(ui.cur_widths, i*sizeof(gdouble));
           ui.cur_path.num_points = i;
         }
         has_attr |= 1;
       }
-      else if (!strcmp(*attribute_names, "widths")) {
-        if (has_attr & 2) *error = xoj_invalid();
-        if (tmpItem->brush.variable_width) *error = xoj_invalid();
-        tmpItem->brush.variable_width = TRUE;
-        cleanup_numeric((gchar *)*attribute_values);
-        i = 0;
-        ptr = *attribute_values;
-        while (*ptr!=0) {
-          realloc_cur_widths(i+1);
-          ui.cur_widths[i] = g_ascii_strtod(ptr, &tmpptr);
-          if (tmpptr == ptr) break;
-          ptr = tmpptr;
-          i++;
-        }
-        tmpItem->widths = (gdouble *) g_memdup(ui.cur_widths, i*sizeof(gdouble));
-        ui.cur_path.num_points = i;
-        has_attr |= 2;
-      }
       else if (!strcmp(*attribute_names, "color")) {
-        if (has_attr & 4) *error = xoj_invalid();
+        if (has_attr & 2) *error = xoj_invalid();
         tmpItem->brush.color_no = COLOR_OTHER;
         for (i=0; i<COLOR_MAX; i++)
           if (!strcmp(*attribute_values, color_names[i])) {
@@ -782,23 +765,23 @@ void xoj_parser_start_element(GMarkupParseContext *context,
           tmpItem->brush.color_rgba = strtoul(*attribute_values + 1, &ptr, 16);
           if (*ptr!=0) *error = xoj_invalid();
         }
-        has_attr |= 4;
+        has_attr |= 2;
       }
       else if (!strcmp(*attribute_names, "tool")) {
-        if (has_attr & 8) *error = xoj_invalid();
+        if (has_attr & 4) *error = xoj_invalid();
         tmpItem->brush.tool_type = -1;
         for (i=0; i<NUM_STROKE_TOOLS; i++)
           if (!strcmp(*attribute_values, tool_names[i])) {
             tmpItem->brush.tool_type = i;
           }
         if (tmpItem->brush.tool_type == -1) *error = xoj_invalid();
-        has_attr |= 8;
+        has_attr |= 4;
       }
       else *error = xoj_invalid();
       attribute_names++;
       attribute_values++;
     }
-    if ((has_attr|2)!=15) *error = xoj_invalid();
+    if (has_attr!=7) *error = xoj_invalid();
     // finish filling the brush info
     tmpItem->brush.thickness_no = 0;  // who cares ?
     tmpItem->brush.tool_options = 0;  // who cares ?
@@ -990,8 +973,22 @@ void xoj_parser_text(GMarkupParseContext *context,
     if (n<4 || n&1 || 
         (tmpItem->brush.variable_width && (n!=2*ui.cur_path.num_points))) 
       { *error = xoj_invalid(); return; } // wrong number of points
-    tmpItem->path = gnome_canvas_points_new(n/2);
-    g_memmove(tmpItem->path->coords, ui.cur_path.coords, n*sizeof(double));
+    /* If the first two points are equal, then assume that the first one was a dummy point and drop it.
+       (If it wasn't, dropping it is fine anyway) */
+    /* Note: comparing floats with "==" is dangerous, though in the case of dummy points, both floats
+       will have been computed in the same way from the same ascii string, so they should really be
+       absolutely equal. */
+    if (ui.cur_path.coords[0] == ui.cur_path.coords[2] && ui.cur_path.coords[1] == ui.cur_path.coords[3]) {
+      ui.cur_path.num_points--;
+      tmpItem->path = gnome_canvas_points_new(n/2 - 1);
+      g_memmove(tmpItem->path->coords, ui.cur_path.coords + 2, (n-2)*sizeof(double));
+      /* Delete the first width (which was only estimated anyway): */
+      memmove(tmpItem->widths, tmpItem->widths + 1, ui.cur_path.num_points*sizeof(gdouble));
+      tmpItem->widths = g_realloc(tmpItem->widths, ui.cur_path.num_points*sizeof(gdouble));
+    } else {
+      tmpItem->path = gnome_canvas_points_new(n/2);
+      g_memmove(tmpItem->path->coords, ui.cur_path.coords, n*sizeof(double));
+    }
   }
   if (!strcmp(element_name, "text")) {
     tmpItem->text = g_malloc(text_len+1);
