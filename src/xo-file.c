@@ -978,7 +978,8 @@ void xoj_parser_text(GMarkupParseContext *context,
     /* Note: comparing floats with "==" is dangerous, though in the case of dummy points, both floats
        will have been computed in the same way from the same ascii string, so they should really be
        absolutely equal. */
-    if (ui.cur_path.coords[0] == ui.cur_path.coords[2] && ui.cur_path.coords[1] == ui.cur_path.coords[3]) {
+    if (ui.cur_path.num_points >= 3 &&
+        ui.cur_path.coords[0] == ui.cur_path.coords[2] && ui.cur_path.coords[1] == ui.cur_path.coords[3]) {
       ui.cur_path.num_points--;
       tmpItem->path = gnome_canvas_points_new(n/2 - 1);
       g_memmove(tmpItem->path->coords, ui.cur_path.coords + 2, (n-2)*sizeof(double));
