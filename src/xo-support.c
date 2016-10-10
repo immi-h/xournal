@@ -48,6 +48,7 @@ static GList *pixmaps_directories = NULL;
 void
 add_pixmap_directory                   (const gchar     *directory)
 {
+  fprintf(stderr, "adding dir: %s\n", directory);
   pixmaps_directories = g_list_prepend (pixmaps_directories,
                                         g_strdup (directory));
 }
@@ -66,6 +67,8 @@ find_pixmap_file                       (const gchar     *filename)
                                          G_DIR_SEPARATOR_S, filename);
       if (g_file_test (pathname, G_FILE_TEST_EXISTS))
         return pathname;
+      else
+          fprintf(stderr, "file not found: %s\n", pathname);
       g_free (pathname);
       elem = elem->next;
     }

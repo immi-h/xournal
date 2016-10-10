@@ -20,6 +20,11 @@ void
 on_fileNew_activate                    (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
+/**
+ * @brief on_fileNewBackground_activate gets called when the *annotate pdf* option is selected.
+ * @param menuitem for the callback.
+ * @param user_data not used.
+ */
 void
 on_fileNewBackground_activate          (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
@@ -460,6 +465,13 @@ on_winMain_delete_event                (GtkWidget       *widget,
 void
 on_optionsUseXInput_activate           (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
+
+void
+on_vscroll_view_changed                (GtkAdjustment   *adjustment,
+                                        gpointer        user_data);
+void
+on_hscroll_view_changed                (GtkAdjustment   *adjustment,
+                                        gpointer        user_data);
 
 void
 on_vscroll_changed                     (GtkAdjustment   *adjustment,

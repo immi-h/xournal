@@ -17,6 +17,9 @@
 #include <libgnomecanvas/libgnomecanvas.h>
 #include <poppler/glib/poppler.h>
 
+#include "utils.h"
+#include "xo-copywindow.h"
+
 // #define INPUT_DEBUG
 /* uncomment this line if you experience event-processing problems
    and want to list the input events received by xournal. Caution, lots
@@ -71,6 +74,8 @@
 
 /* a string (+ aux data) that maintains a refcount */
 
+#define COPY_WINDOW_ZOOM_PER_CLICK 1.1
+
 typedef struct Refstring {
   int nref;
   char *s;
@@ -85,6 +90,7 @@ typedef struct Refstring {
 typedef struct Background {
   int type;
   GnomeCanvasItem *canvas_item;
+  GnomeCanvasItem *canvas_item_view;
   int color_no;
   guint color_rgba;
   int ruling;
@@ -153,6 +159,7 @@ extern guint predef_bgcolors_rgba[COLOR_MAX];
 #define TOOL_VERTSPACE    6
 #define TOOL_HAND         7
 #define TOOL_IMAGE        8
+
 #define NUM_STROKE_TOOLS  3
 #define NUM_TOOLS         9
 #define NUM_BUTTONS       3
@@ -163,9 +170,6 @@ extern guint predef_bgcolors_rgba[COLOR_MAX];
 
 extern double predef_thickness[NUM_STROKE_TOOLS][THICKNESS_MAX];
 
-typedef struct BBox {
-  double left, right, top, bottom;
-} BBox;
 
 struct UndoErasureData;
 
@@ -176,6 +180,7 @@ typedef struct Item {
   GnomeCanvasPoints *path;
   gdouble *widths;
   GnomeCanvasItem *canvas_item; // the corresponding canvas item, or NULL
+  GnomeCanvasItem *canvas_item_view; // the corresponding canvas item on the viewing window, or NULL
   struct BBox bbox;
   struct UndoErasureData *erasure; // for temporary use during erasures
   // the following fields for ITEM_TEXT:
@@ -183,6 +188,7 @@ typedef struct Item {
   gchar *font_name;
   gdouble font_size;
   GtkWidget *widget; // the widget while text is being edited (ITEM_TEMP_TEXT)
+  GtkWidget *widget_view; // the widget while text is being edited (ITEM_TEMP_TEXT)
   // the following fields for ITEM_IMAGE:
   GdkPixbuf *image;  // the image
   gchar *image_png;  // PNG of original image, for save and clipboard
@@ -224,6 +230,7 @@ typedef struct Layer {
   GList *items; // the items on the layer, from bottom to top
   int nitems;
   GnomeCanvasGroup *group;
+  GnomeCanvasGroup *viewGroup;
 } Layer;
 
 typedef struct Page {
@@ -233,6 +240,7 @@ typedef struct Page {
   double hoffset, voffset; // offsets of canvas group rel. to canvas root
   struct Background *bg;
   GnomeCanvasGroup *group;
+  GnomeCanvasGroup *viewingGroup;
 } Page;
 
 typedef struct Journal {
@@ -283,6 +291,7 @@ typedef struct UIData {
   int cur_path_storage_alloc;
   int cur_widths_storage_alloc;
   double zoom; // zoom factor, in pixels per pt
+  double zoomView; // zoom factor, in pixels per pt
   gboolean use_xinput; // use input devices instead of core pointer
   gboolean allow_xinput; // allow use of xinput ?
   gboolean discard_corepointer; // discard core pointer events in XInput mode
@@ -349,6 +358,9 @@ typedef struct UIData {
 #endif
   gboolean poppler_force_cairo; // force poppler to use cairo
   gboolean warned_generate_fontconfig; // for win32 fontconfig cache
+
+  struct CopyWindow copyWindow;
+
 } UIData;
 
 #define BRUSH_LINKED 0
@@ -383,7 +395,6 @@ typedef struct UndoItem {
 
 #define MULTIOP_CONT_REDO 1 // not the last in a multiop, so keep redoing
 #define MULTIOP_CONT_UNDO 2 // not the first in a multiop, so keep undoing
-
 
 typedef struct BgPdfRequest {
   int pageno;
@@ -431,7 +442,10 @@ typedef struct BgPdf {
 // the main window and the canvas
 
 extern GtkWidget *winMain;
+extern GtkWidget *winView;
 extern GnomeCanvas *canvas;
+extern GtkWidget *scrolledWindowView;
+
 
 // the data
 

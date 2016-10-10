@@ -23,8 +23,10 @@
 
 #include "xournal.h"
 #include "xo-support.h"
+#include "xo-misc.h"
 #include "xo-image.h"
 #include "xo-misc.h"
+
 
 // create pixbuf from buffer, or return NULL on failure
 GdkPixbuf *pixbuf_from_buffer(const gchar *buf, gsize buflen)
@@ -67,7 +69,7 @@ void create_image_from_pixbuf(GdkPixbuf *pixbuf, double *pt)
   ui.cur_layer->items = g_list_append(ui.cur_layer->items, item);
   ui.cur_layer->nitems++;
   
-  make_canvas_item_one(ui.cur_layer->group, item);
+  make_canvas_item_one(ui.cur_layer->group, ui.cur_layer->viewGroup, item);
 
   // add undo information
   prepare_new_undo();

@@ -27,6 +27,7 @@
 #include "xo-paint.h"
 #include "xo-misc.h"
 
+#define RECOGNIZER_DEBUG
 typedef struct Inertia {
   double mass, sx, sy, sxx, sxy, syy;
 } Inertia;
@@ -311,6 +312,9 @@ void remove_recognized_strokes(struct RecoSegment *rs, int num_old_items)
     erasure->nrepl = 0;
     erasure->replacement_items = NULL;
     undo->erasurelist = g_list_append(undo->erasurelist, erasure);
+
+    if (old_item->canvas_item_view != NULL)
+      gtk_object_destroy(GTK_OBJECT(old_item->canvas_item_view));
     if (old_item->canvas_item != NULL)
       gtk_object_destroy(GTK_OBJECT(old_item->canvas_item));
     ui.cur_layer->items = g_list_remove(ui.cur_layer->items, old_item);
@@ -340,7 +344,7 @@ struct Item *insert_recognized_curpath(void)
   erasure->replacement_items = g_list_append(erasure->replacement_items, item);
   ui.cur_layer->items = g_list_append(ui.cur_layer->items, item);
   ui.cur_layer->nitems++;
-  make_canvas_item_one(ui.cur_layer->group, item);
+  make_canvas_item_one(ui.cur_layer->group, ui.cur_layer->viewGroup, item);
   return item;
 }
 

@@ -14,10 +14,16 @@
 
 #include <gdk/gdkkeysyms.h>
 #include <gtk/gtk.h>
+#include <libgnomecanvas/libgnomecanvas.h>
 
+#include "xournal.h"
 #include "xo-callbacks.h"
 #include "xo-interface.h"
 #include "xo-support.h"
+
+#include "xo-copywindow.h"
+
+extern struct UIData ui;
 
 #define GLADE_HOOKUP_OBJECT(component,widget,name) \
   g_object_set_data_full (G_OBJECT (component), name, \
@@ -26,6 +32,7 @@
 #define GLADE_HOOKUP_OBJECT_NO_REF(component,widget,name) \
   g_object_set_data (G_OBJECT (component), name, widget)
 
+GtkWidget *scrolledWindowView;
 GtkWidget*
 create_winMain (void)
 {
@@ -269,6 +276,7 @@ create_winMain (void)
   GtkWidget *helpIndex;
   GtkWidget *helpAbout;
   GtkWidget *toolbarMain;
+  GtkWidget* toolbarCopy;
   GtkIconSize tmp_toolbar_icon_size;
   GtkWidget *saveButton;
   GtkWidget *newButton;
@@ -364,6 +372,7 @@ create_winMain (void)
   winMain = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title (GTK_WINDOW (winMain), _("Xournal"));
 
+
   vboxMain = gtk_vbox_new (FALSE, 0);
   gtk_widget_show (vboxMain);
   gtk_container_add (GTK_CONTAINER (winMain), vboxMain);
@@ -371,6 +380,8 @@ create_winMain (void)
   menubar = gtk_menu_bar_new ();
   gtk_widget_show (menubar);
   gtk_box_pack_start (GTK_BOX (vboxMain), menubar, FALSE, FALSE, 0);
+
+
 
   menuFile = gtk_menu_item_new_with_mnemonic (_("_File"));
   gtk_widget_show (menuFile);
@@ -577,6 +588,7 @@ create_winMain (void)
   menuViewZoom_menu = gtk_menu_new ();
   gtk_menu_item_set_submenu (GTK_MENU_ITEM (menuViewZoom), menuViewZoom_menu);
 
+  viewZoomIn = gtk_image_menu_item_new_from_stock ("gtk-zoom-in", accel_group);
   viewZoomIn = gtk_image_menu_item_new_from_stock ("gtk-zoom-in", accel_group);
   gtk_widget_show (viewZoomIn);
   gtk_container_add (GTK_CONTAINER (menuViewZoom_menu), viewZoomIn);
@@ -1487,7 +1499,10 @@ create_winMain (void)
   gtk_container_add (GTK_CONTAINER (menuHelp_menu), helpAbout);
 
   toolbarMain = gtk_toolbar_new ();
+  toolbarCopy = create_copy_toolbar();
+
   gtk_widget_show (toolbarMain);
+  gtk_box_pack_start (GTK_BOX (vboxMain), toolbarCopy, FALSE, FALSE, 0);
   gtk_box_pack_start (GTK_BOX (vboxMain), toolbarMain, FALSE, FALSE, 0);
   gtk_toolbar_set_style (GTK_TOOLBAR (toolbarMain), GTK_TOOLBAR_ICONS);
   tmp_toolbar_icon_size = gtk_toolbar_get_icon_size (GTK_TOOLBAR (toolbarMain));
@@ -2950,6 +2965,7 @@ create_winMain (void)
   return winMain;
 }
 
+
 GtkWidget*
 create_papersizeDialog (void)
 {
@@ -3071,6 +3087,7 @@ create_papersizeDialog (void)
 
   return papersizeDialog;
 }
+
 
 GtkWidget*
 create_aboutDialog (void)

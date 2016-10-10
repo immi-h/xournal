@@ -86,6 +86,7 @@ void new_journal(void)
   ui.saved = TRUE;
   ui.filename = NULL;
   update_file_name(NULL);
+  
 }
 
 // check attachment names
@@ -488,6 +489,7 @@ gboolean close_journal(void)
   shutdown_bgpdf();
   delete_journal(&journal);
   autosave_cleanup(&ui.autosave_filename_list);
+  copy_window_cleanup();
   
   return TRUE;
   /* note: various members of ui and journal are now in invalid states,
@@ -663,7 +665,9 @@ void xoj_parser_start_element(GMarkupParseContext *context,
                 if (i > tmpJournal.last_attach_no) 
                   tmpJournal.last_attach_no = i;
             }
-            else tmpbg_filename = g_strdup(*attribute_values);
+            else
+                tmpbg_filename = g_strdup(*attribute_values);
+
             tmpPage->bg->pixbuf = gdk_pixbuf_new_from_file(tmpbg_filename, NULL);
             if (tmpPage->bg->pixbuf == NULL) {
               dialog = gtk_message_dialog_new(GTK_WINDOW(winMain), GTK_DIALOG_MODAL,
@@ -1111,7 +1115,9 @@ gboolean open_journal(char *filename)
     while (bgpdf.status != STATUS_NOT_INIT) gtk_main_iteration();
     new_journal();
     ui.zoom = ui.startup_zoom;
+    ui.zoomView = ui.zoom;
     gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
+    gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
     update_page_stuff();
     return init_bgpdf(filename, TRUE, DOMAIN_ABSOLUTE);
   }
@@ -1169,8 +1175,10 @@ gboolean open_journal(char *filename)
   ui.layerno = ui.cur_page->nlayers-1;
   ui.cur_layer = (struct Layer *)(g_list_last(ui.cur_page->layers)->data);
   ui.zoom = ui.startup_zoom;
+  ui.zoomView = ui.zoom;
   update_file_name(g_strdup(filename));
   gnome_canvas_set_pixels_per_unit(canvas, ui.zoom);
+  gnome_canvas_set_pixels_per_unit(ui.copyWindow.canvas, ui.zoomView);
   make_canvas_items();
   update_page_stuff();
   rescale_bg_pixmaps(); // this requests the PDF pages if need be
@@ -1375,7 +1383,7 @@ gboolean bgpdf_scheduler_callback(gpointer data)
   PopplerPage *pdfpage;
   gdouble height, width;
   int scaled_height, scaled_width;
-  GdkPixmap *pixmap;
+  GdkPixmap *pixmap, *pixmapFaded;
   cairo_t *cr;
 
   // if all requests have been cancelled, remove ourselves from main loop
@@ -1405,7 +1413,9 @@ gboolean bgpdf_scheduler_callback(gpointer data)
       cairo_destroy(cr);
       pixbuf = gdk_pixbuf_get_from_drawable(NULL, GDK_DRAWABLE(pixmap),
         NULL, 0, 0, 0, 0, scaled_width, scaled_height);
+
       g_object_unref(pixmap);
+
     }
     else { // directly poppler -> pixbuf: faster, but bitmap font bug
       pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB,
@@ -1420,6 +1430,15 @@ gboolean bgpdf_scheduler_callback(gpointer data)
 
   // process the generated pixbuf...
   if (pixbuf != NULL) { // success
+
+   GdkPixbuf* pixbufFaded = gdk_pixbuf_copy(pixbuf);
+
+    gdk_pixbuf_saturate_and_pixelate (
+        pixbuf,
+        pixbufFaded,
+        1.,
+        True
+    );
     while (req->pageno > bgpdf.npages) {
       bgpg = g_new(struct BgPdfPage, 1);
       bgpg->pixbuf = NULL;
@@ -1428,7 +1447,7 @@ gboolean bgpdf_scheduler_callback(gpointer data)
     }
     bgpg = g_list_nth_data(bgpdf.pages, req->pageno-1);
     if (bgpg->pixbuf!=NULL) g_object_unref(bgpg->pixbuf);
-    bgpg->pixbuf = pixbuf;
+    bgpg->pixbuf = pixbufFaded;
     bgpg->dpi = req->dpi;
     bgpg->pixel_height = scaled_height;
     bgpg->pixel_width = scaled_width;
@@ -1568,6 +1587,7 @@ gboolean init_bgpdf(char *pdfname, gboolean create_pages, int file_domain)
     if (!pdfpage) continue;
     if (journal.npages < i) {
       bg = g_new(struct Background, 1);
+      memcpy(bg, ui.default_page.bg, sizeof(struct Background));
       bg->canvas_item = NULL;
       pg = NULL;
     } else {
@@ -1718,6 +1738,7 @@ void init_config_default(void)
 
   DEFAULT_ZOOM = DISPLAY_DPI_DEFAULT/72.0;
   ui.zoom = ui.startup_zoom = 1.0*DEFAULT_ZOOM;
+  ui.zoomView = ui.zoom;
   ui.default_page.height = 792.0;
   ui.default_page.width = 612.0;
   ui.default_page.bg->type = BG_SOLID;

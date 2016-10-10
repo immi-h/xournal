@@ -263,7 +263,7 @@ void clipboard_paste_from_xournal(GtkSelectionData *sel_data)
       }
       else item->widths = NULL;
       update_item_bbox(item);
-      make_canvas_item_one(ui.cur_layer->group, item);
+      make_canvas_item_one(ui.cur_layer->group, ui.cur_layer->group, item);
     }
     if (item->type == ITEM_TEXT) {
       g_memmove(&item->brush, p, sizeof(struct Brush)); p+= sizeof(struct Brush);
@@ -278,7 +278,7 @@ void clipboard_paste_from_xournal(GtkSelectionData *sel_data)
       item->font_name = g_malloc(len+1);
       g_memmove(item->font_name, p, len+1); p+= len+1;
       g_memmove(&item->font_size, p, sizeof(double)); p+= sizeof(double);
-      make_canvas_item_one(ui.cur_layer->group, item);
+      make_canvas_item_one(ui.cur_layer->group, ui.cur_layer->viewGroup, item);
     }
     if (item->type == ITEM_IMAGE) {
       item->canvas_item = NULL;
@@ -297,7 +297,7 @@ void clipboard_paste_from_xournal(GtkSelectionData *sel_data)
       } else {
         item->image = NULL;
       }
-      make_canvas_item_one(ui.cur_layer->group, item);
+      make_canvas_item_one(ui.cur_layer->group, ui.cur_layer->viewGroup, item);
     }
   }
 
@@ -340,7 +340,7 @@ void clipboard_paste_text(gchar *text)
   item->font_name = g_strdup(ui.font_name);
   item->font_size = ui.font_size;
   item->bbox.left = pt[0]; item->bbox.top = pt[1];
-  make_canvas_item_one(ui.cur_layer->group, item);
+  make_canvas_item_one(ui.cur_layer->group, ui.cur_layer->viewGroup, item);
   update_item_bbox(item);
 
   // move the text to fit on the page if needed

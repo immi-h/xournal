@@ -387,7 +387,7 @@ void start_vertspace(GdkEvent *event)
       gnome_canvas_rect_get_type(), "width-pixels", 1, 
       "outline-color-rgba", 0x000000ff,
       "fill-color-rgba", 0x80808040,
-      "x1", -100.0, "x2", ui.cur_page->width+100, "y1", pt[1], "y2", pt[1], NULL);
+      "x1", -100.0, "x2", ui.cur_page->width+101, "y1", pt[1], "y2", pt[1], NULL);
   update_cursor();
 }
 
@@ -456,9 +456,12 @@ void continue_movesel(GdkEvent *event)
       item = (struct Item *)list->data;
       if (item->canvas_item!=NULL)
         gnome_canvas_item_reparent(item->canvas_item, ui.selection->move_layer->group);
+      if (item->canvas_item_view!=NULL)
+        gnome_canvas_item_reparent(item->canvas_item_view, ui.selection->move_layer->viewGroup);
     }
     // avoid a refresh bug
     gnome_canvas_item_move(GNOME_CANVAS_ITEM(ui.selection->move_layer->group), 0., 0.);
+    gnome_canvas_item_move(GNOME_CANVAS_ITEM(ui.selection->move_layer->viewGroup), 0., 0.);
     if (ui.cur_item_type == ITEM_MOVESEL_VERT)
       gnome_canvas_item_set(ui.selection->canvas_item,
         "x2", tmppage->width+100, 
@@ -484,6 +487,8 @@ void continue_movesel(GdkEvent *event)
     item = (struct Item *)list->data;
     if (item->canvas_item != NULL)
       gnome_canvas_item_move(item->canvas_item, dx, dy);
+    if (item->canvas_item_view != NULL)
+      gnome_canvas_item_move(item->canvas_item_view, dx, dy);
   }
 }
 
@@ -620,6 +625,8 @@ void selection_delete(void)
     item = (struct Item *)itemlist->data;
     if (item->canvas_item!=NULL)
       gtk_object_destroy(GTK_OBJECT(item->canvas_item));
+    if (item->canvas_item_view!=NULL)
+      gtk_object_destroy(GTK_OBJECT(item->canvas_item_view));
     erasure = g_new(struct UndoErasureData, 1);
     erasure->item = item;
     erasure->npos = g_list_index(ui.selection->layer->items, item);
@@ -645,7 +652,8 @@ void recolor_selection(int color_no, guint color_rgba)
   struct Item *item;
   struct Brush *brush;
   GnomeCanvasGroup *group;
-  
+  GnomeCanvasGroup *viewGroup;
+
   if (ui.selection == NULL) return;
   prepare_new_undo();
   undo->type = ITEM_REPAINTSEL;
@@ -669,8 +677,10 @@ void recolor_selection(int color_no, guint color_rgba)
            "fill-color-rgba", item->brush.color_rgba, NULL);
       else {
         group = (GnomeCanvasGroup *) item->canvas_item->parent;
+        viewGroup = (GnomeCanvasGroup *) item->canvas_item_view->parent;
+
         gtk_object_destroy(GTK_OBJECT(item->canvas_item));
-        make_canvas_item_one(group, item);
+        make_canvas_item_one(group, viewGroup, item);
       }
     }
   }
@@ -682,7 +692,8 @@ void rethicken_selection(int val)
   struct Item *item;
   struct Brush *brush;
   GnomeCanvasGroup *group;
-  
+  GnomeCanvasGroup *viewGroup;
+
   if (ui.selection == NULL) return;
   prepare_new_undo();
   undo->type = ITEM_REPAINTSEL;
@@ -705,9 +716,10 @@ void rethicken_selection(int val)
            "width-units", item->brush.thickness, NULL);
       else {
         group = (GnomeCanvasGroup *) item->canvas_item->parent;
+        viewGroup = (GnomeCanvasGroup *) item->canvas_item_view->parent;
         gtk_object_destroy(GTK_OBJECT(item->canvas_item));
         item->brush.variable_width = FALSE;
-        make_canvas_item_one(group, item);
+        make_canvas_item_one(group, viewGroup, item);
       }
     }
   }

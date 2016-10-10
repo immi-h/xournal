@@ -31,6 +31,7 @@
 #include "xo-file.h"
 #include "xo-paint.h"
 #include "xo-shapes.h"
+#include "xo-copywindow.h"
 
 GtkWidget *winMain;
 GnomeCanvas *canvas;
@@ -75,6 +76,7 @@ void init_stuff (int argc, char *argv[])
 
   // initialize data
   ui.default_page.bg->canvas_item = NULL;
+  ui.default_page.bg->canvas_item_view = NULL;
   ui.layerbox_length = 0;
 
   if (argc > 2 || (argc == 2 && argv[1][0] == '-')) {
@@ -86,6 +88,7 @@ void init_stuff (int argc, char *argv[])
   undo = NULL; redo = NULL;
   journal.pages = NULL;
   bgpdf.status = STATUS_NOT_INIT;
+
 
   new_journal();  
   
@@ -156,7 +159,7 @@ void init_stuff (int argc, char *argv[])
   GTK_WIDGET_SET_FLAGS(GTK_WIDGET(canvas), GTK_CAN_FOCUS);
   GTK_WIDGET_SET_FLAGS(GTK_WIDGET(GET_COMPONENT("spinPageNo")), GTK_CAN_FOCUS);
   
-  // install hooks on button/key/activation events to make the spinPageNo lose focus
+  // install hooks 	on button/key/activation events to make the spinPageNo lose focus
   gtk_container_forall(GTK_CONTAINER(winMain), install_focus_hooks, NULL);
 
   // set up and initialize the canvas
@@ -171,9 +174,14 @@ void init_stuff (int argc, char *argv[])
      GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK |
      GDK_PROXIMITY_IN_MASK | GDK_PROXIMITY_OUT_MASK);
   gnome_canvas_set_pixels_per_unit (canvas, ui.zoom);
+  gnome_canvas_set_pixels_per_unit (ui.copyWindow.canvas, ui.zoomView);
   gnome_canvas_set_center_scroll_region (canvas, TRUE);
+  gnome_canvas_set_center_scroll_region (ui.copyWindow.canvas, TRUE);
+  gtk_layout_get_hadjustment(GTK_LAYOUT (ui.copyWindow.canvas))->step_increment = ui.scrollbar_step_increment;
+  gtk_layout_get_vadjustment(GTK_LAYOUT (ui.copyWindow.canvas))->step_increment = ui.scrollbar_step_increment;
   gtk_layout_get_hadjustment(GTK_LAYOUT (canvas))->step_increment = ui.scrollbar_step_increment;
   gtk_layout_get_vadjustment(GTK_LAYOUT (canvas))->step_increment = ui.scrollbar_step_increment;
+
 
   // set up the page size and canvas size
   update_page_stuff();
@@ -204,6 +212,12 @@ void init_stuff (int argc, char *argv[])
                     NULL);
   g_signal_connect ((gpointer) canvas, "motion_notify_event",
                     G_CALLBACK (on_canvas_motion_notify_event),
+                    NULL);
+  g_signal_connect ((gpointer) gtk_layout_get_hadjustment(GTK_LAYOUT(ui.copyWindow.canvas)),
+                    "value-changed", G_CALLBACK (on_hscroll_view_changed),
+                    NULL);
+  g_signal_connect ((gpointer) gtk_layout_get_vadjustment(GTK_LAYOUT(ui.copyWindow.canvas)),
+                    "value-changed", G_CALLBACK (on_vscroll_view_changed),
                     NULL);
   g_signal_connect ((gpointer) gtk_layout_get_vadjustment(GTK_LAYOUT(canvas)),
                     "value-changed", G_CALLBACK (on_vscroll_changed),
@@ -368,10 +382,13 @@ main (int argc, char *argv[])
    * the project. Delete any components that you don't want shown initially.
    */
   winMain = create_winMain ();
-  
+  winView = create_winView();
+
   init_stuff (argc, argv);
+
+
   gtk_window_set_icon(GTK_WINDOW(winMain), create_pixbuf("xournal.png"));
-  
+
   gtk_main ();
   
   if (bgpdf.status != STATUS_NOT_INIT) shutdown_bgpdf();
